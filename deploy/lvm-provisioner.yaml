@@ -1,3 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: csi-lvm
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -11,6 +15,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: csi-lvm-controller
+  namespace: csi-lvm
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -41,12 +46,13 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: csi-lvm-controller
-  namespace: default
+  namespace: csi-lvm
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: csi-lvm-controller
+  namespace: csi-lvm
 spec:
   replicas: 1
   selector:
