@@ -41,6 +41,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: csi-lvm-controller
+  namespace: default
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -60,9 +61,10 @@ spec:
       containers:
       - name: csi-lvm-controller
         image: metalpod/csi-lvm
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         command:
-        - csi-lvm
+        - /csi-lvm-provisioner
+        args:
         - start
         env:
         - name: CSI_LVM_PROVISIONER_NAMESPACE

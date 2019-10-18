@@ -2,7 +2,7 @@ GO111MODULE := on
 
 .PHONY: all
 all:
-	go build -tags netgo -ldflags "-linkmode external -extldflags '-static -s -w'" -o bin/csi-lvm-provisioner
+	go build -tags netgo -o bin/csi-lvm-provisioner
 	strip bin/csi-lvm-provisioner
 
 .PHONY: dockerimage
