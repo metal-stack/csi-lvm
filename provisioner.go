@@ -28,16 +28,12 @@ type actionType string
 type lvmProvisioner struct {
 	// The directory to create the directories for every lv and mount them
 	lvDir string
-
 	// devicePattern specifies a pattern of host devices to be part of the main volume group
 	devicePattern string
-
 	// image to execute lvm commands
 	provisionerImage string
-
-	kubeClient clientset.Interface
-
-	namespace string
+	kubeClient       clientset.Interface
+	namespace        string
 }
 
 // NewLVMProvisioner creates a new hostpath provisioner
@@ -53,6 +49,14 @@ func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, deviceP
 
 var _ controller.Provisioner = &lvmProvisioner{}
 
+type volumeAction struct {
+	action   actionType
+	name     string
+	path     string
+	nodeName string
+	size     int64
+}
+
 // Provision creates a storage asset and returns a PV object representing it.
 func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.PersistentVolume, error) {
 	node := options.SelectedNode
@@ -65,12 +69,18 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 
 	klog.Info("Creating volume %v at %v:%v", name, node.Name, path)
 
-	createCmdsForPath := []string{
-		"mkdir",
-		"-m", "0777",
-		"-p",
+	size, ok := options.PVC.Spec.Resources.Limits.StorageEphemeral().AsInt64()
+	if !ok {
+		return nil, fmt.Errorf("configuration error, no volume size was specified")
 	}
-	if err := p.createHelperPod(actionTypeCreate, createCmdsForPath, name, path, node.Name); err != nil {
+	va := volumeAction{
+		action:   actionTypeCreate,
+		name:     name,
+		path:     path,
+		nodeName: node.Name,
+		size:     size,
+	}
+	if err := p.createHelperPod(va); err != nil {
 		return nil, err
 	}
 
@@ -128,8 +138,14 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 	if volume.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimRetain {
 		klog.Info("Deleting volume %v at %v:%v", volume.Name, node, path)
 		// FIXME implement for lvm
-		cleanupCmdsForPath := []string{"rm", "-rf"}
-		if err := p.createHelperPod(actionTypeDelete, cleanupCmdsForPath, volume.Name, path, node); err != nil {
+		va := volumeAction{
+			action:   actionTypeDelete,
+			name:     volume.Name,
+			path:     path,
+			nodeName: node,
+			size:     0,
+		}
+		if err := p.createHelperPod(va); err != nil {
 			klog.Info("clean up volume %v failed: %v", volume.Name, err)
 			return err
 		}
@@ -139,11 +155,11 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 	return nil
 }
 
-func (p *lvmProvisioner) createHelperPod(action actionType, cmdsForPath []string, name, path, node string) (err error) {
+func (p *lvmProvisioner) createHelperPod(va volumeAction) (err error) {
 	defer func() {
-		err = fmt.Errorf("failed to %v volume %v err:%v", action, name, err)
+		err = fmt.Errorf("failed to %v volume %v err:%v", va.action, va.name, err)
 	}()
-	if name == "" || path == "" || node == "" {
+	if va.name == "" || va.path == "" || va.nodeName == "" {
 		return fmt.Errorf("invalid empty name or path or node")
 	}
 
@@ -151,11 +167,11 @@ func (p *lvmProvisioner) createHelperPod(action actionType, cmdsForPath []string
 	privileged := true
 	provisionerPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: string(action) + "-" + name,
+			Name: string(va.action) + "-" + va.name,
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy: v1.RestartPolicyNever,
-			NodeName:      node,
+			NodeName:      va.nodeName,
 			Tolerations: []v1.Toleration{
 				{
 					Operator: v1.TolerationOpExists,
@@ -163,7 +179,7 @@ func (p *lvmProvisioner) createHelperPod(action actionType, cmdsForPath []string
 			},
 			Containers: []v1.Container{
 				{
-					Name:  "csi-lvm-" + string(action),
+					Name:  "csi-lvm-" + string(va.action),
 					Image: p.provisionerImage,
 					// FIXME implement based on create or delete action
 					// Command: append(cmdsForPath, path.Join("/data/", volumeDir)),
@@ -236,7 +252,7 @@ func (p *lvmProvisioner) createHelperPod(action actionType, cmdsForPath []string
 		return fmt.Errorf("create process timeout after %v seconds", 20)
 	}
 
-	klog.Info("Volume %v has been %vd on %v:%v", name, action, node, path)
+	klog.Info("Volume %v has been %vd on %v:%v", va.name, va.action, va.nodeName, va.path)
 	return nil
 }
 
