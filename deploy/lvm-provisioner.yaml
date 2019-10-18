@@ -1,0 +1,75 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: csi-lvm
+provisioner: metal-pod.io/csi-lvm
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-lvm-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: csi-lvm-controller
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["endpoints", "persistentvolumes", "pods"]
+  verbs: ["*"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: csi-lvm-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: csi-lvm-controller
+subjects:
+- kind: ServiceAccount
+  name: csi-lvm-controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csi-lvm-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-lvm-controller
+  template:
+    metadata:
+      labels:
+        app: csi-lvm-controller
+    spec:
+      serviceAccountName: csi-lvm-controller
+      containers:
+      - name: csi-lvm-controller
+        image: metalpod/csi-lvm
+        imagePullPolicy: Always
+        command:
+        - csi-lvm
+        - start
+        env:
+        - name: CSI_LVM_PROVISIONER_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CSI_LVM_PROVISIONER_IMAGE
+          value: "metalpod/csi-lvm-provisioner"
+        - name: CSI_LVM_DEVICE_PATTERN
+          value: "nvm*"

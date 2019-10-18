@@ -3,11 +3,15 @@ package main
 import (
 	"fmt"
 	"path"
+	"time"
+
+	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	k8serror "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientset "k8s.io/client-go/kubernetes"
 
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
-
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/klog"
 )
@@ -30,14 +34,20 @@ type lvmProvisioner struct {
 
 	// image to execute lvm commands
 	provisionerImage string
+
+	kubeClient clientset.Interface
+
+	namespace string
 }
 
 // NewLVMProvisioner creates a new hostpath provisioner
-func NewLVMProvisioner(lvDir, devicePattern, provisionerImage string) controller.Provisioner {
+func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage string) controller.Provisioner {
 	return &lvmProvisioner{
 		lvDir:            lvDir,
 		devicePattern:    devicePattern,
 		provisionerImage: provisionerImage,
+		kubeClient:       kubeClient,
+		namespace:        namespace,
 	}
 }
 
@@ -137,75 +147,94 @@ func (p *lvmProvisioner) createHelperPod(action actionType, cmdsForPath []string
 		return fmt.Errorf("invalid empty name or path or node")
 	}
 
-	// hostPathType := v1.HostPathDirectoryOrCreate
-	// helperPod := &v1.Pod{
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name: string(action) + "-" + name,
-	// 	},
-	// 	Spec: v1.PodSpec{
-	// 		RestartPolicy: v1.RestartPolicyNever,
-	// 		NodeName:      node,
-	// 		Tolerations: []v1.Toleration{
-	// 			{
-	// 				Operator: v1.TolerationOpExists,
-	// 			},
-	// 		},
-	// 		Containers: []v1.Container{
-	// 			{
-	// 				Name:    "local-path-" + string(action),
-	// 				Image:   p.provisionerImage,
-	// 				Command: append(cmdsForPath, path.Join("/data/", volumeDir)),
-	// 				VolumeMounts: []v1.VolumeMount{
-	// 					{
-	// 						Name:      "data",
-	// 						ReadOnly:  false,
-	// 						MountPath: "/data/",
-	// 					},
-	// 				},
-	// 				ImagePullPolicy: v1.PullIfNotPresent,
-	// 			},
-	// 		},
-	// 		Volumes: []v1.Volume{
-	// 			{
-	// 				Name: "data",
-	// 				VolumeSource: v1.VolumeSource{
-	// 					HostPath: &v1.HostPathVolumeSource{
-	// 						Path: parentDir,
-	// 						Type: &hostPathType,
-	// 					},
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// }
+	hostPathType := v1.HostPathDirectoryOrCreate
+	privileged := true
+	provisionerPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: string(action) + "-" + name,
+		},
+		Spec: v1.PodSpec{
+			RestartPolicy: v1.RestartPolicyNever,
+			NodeName:      node,
+			Tolerations: []v1.Toleration{
+				{
+					Operator: v1.TolerationOpExists,
+				},
+			},
+			Containers: []v1.Container{
+				{
+					Name:  "csi-lvm-" + string(action),
+					Image: p.provisionerImage,
+					// FIXME implement based on create or delete action
+					// Command: append(cmdsForPath, path.Join("/data/", volumeDir)),
+					VolumeMounts: []v1.VolumeMount{
+						{
+							Name:      "data",
+							ReadOnly:  false,
+							MountPath: "/data/",
+						},
+						{
+							Name:      "devices",
+							ReadOnly:  false,
+							MountPath: "/dev",
+						},
+					},
+					ImagePullPolicy: v1.PullIfNotPresent,
+					SecurityContext: &v1.SecurityContext{
+						Privileged: &privileged,
+					},
+				},
+			},
+			Volumes: []v1.Volume{
+				{
+					Name: "data",
+					VolumeSource: v1.VolumeSource{
+						HostPath: &v1.HostPathVolumeSource{
+							Path: p.lvDir,
+							Type: &hostPathType,
+						},
+					},
+				},
+				{
+					Name: "devices",
+					VolumeSource: v1.VolumeSource{
+						HostPath: &v1.HostPathVolumeSource{
+							Path: "/dev",
+							Type: &hostPathType,
+						},
+					},
+				},
+			},
+		},
+	}
 
-	// // If it already exists due to some previous errors, the pod will be cleaned up later automatically
-	// // https://github.com/rancher/local-path-provisioner/issues/27
-	// _, err = p.kubeClient.CoreV1().Pods(p.namespace).Create(helperPod)
-	// if err != nil && !k8serror.IsAlreadyExists(err) {
-	// 	return err
-	// }
+	// If it already exists due to some previous errors, the pod will be cleaned up later automatically
+	// https://github.com/rancher/local-path-provisioner/issues/27
+	_, err = p.kubeClient.CoreV1().Pods(p.namespace).Create(provisionerPod)
+	if err != nil && !k8serror.IsAlreadyExists(err) {
+		return err
+	}
 
-	// defer func() {
-	// 	e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(helperPod.Name, &metav1.DeleteOptions{})
-	// 	if e != nil {
-	// 		logrus.Errorf("unable to delete the helper pod: %v", e)
-	// 	}
-	// }()
+	defer func() {
+		e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(provisionerPod.Name, &metav1.DeleteOptions{})
+		if e != nil {
+			logrus.Errorf("unable to delete the helper pod: %v", e)
+		}
+	}()
 
-	// completed := false
-	// for i := 0; i < CmdTimeoutCounts; i++ {
-	// 	if pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(helperPod.Name, metav1.GetOptions{}); err != nil {
-	// 		return err
-	// 	} else if pod.Status.Phase == v1.PodSucceeded {
-	// 		completed = true
-	// 		break
-	// 	}
-	// 	time.Sleep(1 * time.Second)
-	// }
-	// if !completed {
-	// 	return fmt.Errorf("create process timeout after %v seconds", CmdTimeoutCounts)
-	// }
+	completed := false
+	for i := 0; i < 20; i++ {
+		if pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(provisionerPod.Name, metav1.GetOptions{}); err != nil {
+			return err
+		} else if pod.Status.Phase == v1.PodSucceeded {
+			completed = true
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	if !completed {
+		return fmt.Errorf("create process timeout after %v seconds", 20)
+	}
 
 	klog.Info("Volume %v has been %vd on %v:%v", name, action, node, path)
 	return nil
