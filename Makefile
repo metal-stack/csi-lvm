@@ -8,12 +8,12 @@ provisioner:
 
 .PHONY: controller
 controller:
-	go build -tags netgo -o bin/csi-lvm-controller
+	go build -tags netgo -o bin/csi-lvm-controller cmd/controller/*.go
 	strip bin/csi-lvm-controller
 
 .PHONY: dockerimages
 dockerimages:
-	docker build -t metalpod/csi-lvm-controller:latest .
+	docker build -t metalpod/csi-lvm-controller:latest . -f cmd/controller/Dockerfile
 	docker build -t metalpod/csi-lvm-provisioner:latest . -f cmd/provisioner/Dockerfile
 
 .PHONY: dockerpush
