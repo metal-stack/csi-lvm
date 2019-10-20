@@ -80,7 +80,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		nodeName: node.Name,
 		size:     size,
 	}
-	if err := p.createHelperPod(va); err != nil {
+	if err := p.createProvisionerPod(va); err != nil {
 		return nil, err
 	}
 
@@ -137,7 +137,6 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 	}
 	if volume.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimRetain {
 		klog.Info("Deleting volume %v at %v:%v", volume.Name, node, path)
-		// FIXME implement for lvm
 		va := volumeAction{
 			action:   actionTypeDelete,
 			name:     volume.Name,
@@ -145,7 +144,7 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 			nodeName: node,
 			size:     0,
 		}
-		if err := p.createHelperPod(va); err != nil {
+		if err := p.createProvisionerPod(va); err != nil {
 			klog.Info("clean up volume %v failed: %v", volume.Name, err)
 			return err
 		}
@@ -155,7 +154,7 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 	return nil
 }
 
-func (p *lvmProvisioner) createHelperPod(va volumeAction) (err error) {
+func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	defer func() {
 		err = fmt.Errorf("failed to %v volume %v err:%v", va.action, va.name, err)
 	}()
@@ -171,6 +170,7 @@ func (p *lvmProvisioner) createHelperPod(va volumeAction) (err error) {
 		command = append(command, "deletelv")
 	}
 
+	klog.Infof("start provisionerPod with command:%s", command)
 	hostPathType := v1.HostPathDirectoryOrCreate
 	privileged := true
 	provisionerPod := &v1.Pod{

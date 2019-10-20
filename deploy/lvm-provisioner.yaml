@@ -66,10 +66,10 @@ spec:
       serviceAccountName: csi-lvm-controller
       containers:
       - name: csi-lvm-controller
-        image: metalpod/csi-lvm
+        image: metalpod/csi-lvm-controller
         imagePullPolicy: IfNotPresent
         command:
-        - /csi-lvm-provisioner
+        - /csi-lvm-controller
         args:
         - start
         env:
@@ -80,4 +80,4 @@ spec:
         - name: CSI_LVM_PROVISIONER_IMAGE
           value: "metalpod/csi-lvm-provisioner"
         - name: CSI_LVM_DEVICE_PATTERN
-          value: "nvm*"
+          value: "/dev/loop0"
