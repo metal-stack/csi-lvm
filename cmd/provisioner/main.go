@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	flagLVName    = "lvname"
-	flagLVSize    = "lvsize"
-	flagVGName    = "vgname"
-	flagPVS       = "pvs"
-	flagDirectory = "directory"
+	flagLVName         = "lvname"
+	flagLVSize         = "lvsize"
+	flagVGName         = "vgname"
+	flagDevicesPattern = "devices"
+	flagDirectory      = "directory"
 )
 
 func cmdNotFound(c *cli.Context, command string) {

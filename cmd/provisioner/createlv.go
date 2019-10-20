@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"github.com/google/lvmd/commands"
 	"github.com/urfave/cli"
@@ -32,10 +33,9 @@ func createLVCmd() cli.Command {
 				Name:  flagDirectory,
 				Usage: "Required. the name of the directory to mount the lv",
 			},
-			// FIXME lvmd does not allow to create vgs with multiple pvs
 			cli.StringSliceFlag{
-				Name:  flagPVS,
-				Usage: "Required. the list of the physical volumes to use",
+				Name:  flagDevicesPattern,
+				Usage: "Required. the patterns of the physical volumes to use.",
 			},
 		},
 		Action: func(c *cli.Context) {
@@ -63,12 +63,12 @@ func createLV(c *cli.Context) error {
 	if dirName == "" {
 		return fmt.Errorf("invalid empty flag %v", flagDirectory)
 	}
-	pvs := c.StringSlice(flagPVS)
-	if len(pvs) == 0 {
-		return fmt.Errorf("invalid empty flag %v", flagPVS)
+	devicesPattern := c.StringSlice(flagDevicesPattern)
+	if len(devicesPattern) == 0 {
+		return fmt.Errorf("invalid empty flag %v", flagDevicesPattern)
 	}
 
-	log.Printf("create lv %s size:%d vg:%s pvs:%s dir:%s", lvName, lvSize, vgName, pvs, dirName)
+	log.Printf("create lv %s size:%d vg:%s devices:%s dir:%s", lvName, lvSize, vgName, devicesPattern, dirName)
 
 	vgs, err := commands.ListVG(context.Background())
 	if err != nil {
@@ -82,8 +82,12 @@ func createLV(c *cli.Context) error {
 		}
 	}
 	if !vgexists {
+		devs, err := devices(devicesPattern)
+		if err != nil {
+			return fmt.Errorf("unable to lookup devices from devicesPattern %s, err:%v", devicesPattern, err)
+		}
 		tags := []string{"vg.metal-pod.io/csi-lvm"}
-		output, err := commands.CreateVG(context.Background(), vgName, pvs[0], tags)
+		output, err := createVG(vgName, devs, tags)
 		if err != nil {
 			return fmt.Errorf("unable to create vg: %v output:%s", err, output)
 		}
@@ -99,8 +103,19 @@ func createLV(c *cli.Context) error {
 		return err
 	}
 
-	log.Printf("lv %s size:%d vg:%s pvs:%s created", lvName, lvSize, vgName, pvs)
+	log.Printf("lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	return nil
+}
+
+func devices(devicesPattern []string) (devices []string, err error) {
+	for _, devicePattern := range devicesPattern {
+		matches, err := filepath.Glob(filepath.Join("/dev", devicePattern))
+		if err != nil {
+			return nil, err
+		}
+		devices = append(devices, matches...)
+	}
+	return devices, nil
 }
 
 func mountLV(lvname, vgname, directory string) (string, error) {
@@ -123,4 +138,15 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 		return string(out), fmt.Errorf("unable to mount %s to %s err:%v", lvPath, mountPath, err)
 	}
 	return "", nil
+}
+
+func createVG(name string, physicalVolumes []string, tags []string) (string, error) {
+	args := []string{"-v", name}
+	args = append(args, physicalVolumes...)
+	for _, tag := range tags {
+		args = append(args, "--add-tag", tag)
+	}
+	cmd := exec.Command("vgcreate", args...)
+	out, err := cmd.CombinedOutput()
+	return string(out), err
 }
