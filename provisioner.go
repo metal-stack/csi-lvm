@@ -163,6 +163,14 @@ func (p *lvmProvisioner) createHelperPod(va volumeAction) (err error) {
 		return fmt.Errorf("invalid empty name or path or node")
 	}
 
+	command := []string{"/csi-lvm-provisioner", "--lvname", va.name, "--vgname", "vg-csi-lvm", "--directory", p.lvDir}
+	if va.action == actionTypeCreate {
+		command = append(command, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--pvs", p.devicePattern)
+	}
+	if va.action == actionTypeCreate {
+		command = append(command, "deletelv")
+	}
+
 	hostPathType := v1.HostPathDirectoryOrCreate
 	privileged := true
 	provisionerPod := &v1.Pod{
@@ -179,10 +187,9 @@ func (p *lvmProvisioner) createHelperPod(va volumeAction) (err error) {
 			},
 			Containers: []v1.Container{
 				{
-					Name:  "csi-lvm-" + string(va.action),
-					Image: p.provisionerImage,
-					// FIXME implement based on create or delete action
-					// Command: append(cmdsForPath, path.Join("/data/", volumeDir)),
+					Name:    "csi-lvm-" + string(va.action),
+					Image:   p.provisionerImage,
+					Command: command,
 					VolumeMounts: []v1.VolumeMount{
 						{
 							Name:      "data",

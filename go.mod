@@ -3,6 +3,7 @@ module github.com/metal-pod/csi-lvm
 go 1.13
 
 require (
+	github.com/google/lvmd v0.0.0-20190916151813-e6e28ff087f6
 	github.com/miekg/dns v1.1.22 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1 // indirect
