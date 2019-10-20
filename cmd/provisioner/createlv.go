@@ -100,7 +100,7 @@ func createLV(c *cli.Context) error {
 
 	output, err = mountLV(lvName, vgName, dirName)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
 	}
 
 	log.Printf("lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)

@@ -17,7 +17,6 @@ import (
 )
 
 const (
-	provisionerName  = "metal-pod.io/lvm"
 	keyNode          = "kubernetes.io/hostname"
 	actionTypeCreate = "create"
 	actionTypeDelete = "delete"
@@ -67,7 +66,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	name := options.PVName
 	path := path.Join(p.lvDir, name)
 
-	klog.Info("Creating volume %v at %v:%v", name, node.Name, path)
+	klog.Infof("Creating volume %v at %v:%v", name, node.Name, path)
 
 	size, ok := options.PVC.Spec.Resources.Limits.StorageEphemeral().AsInt64()
 	if !ok {
@@ -136,7 +135,7 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 		return err
 	}
 	if volume.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimRetain {
-		klog.Info("Deleting volume %v at %v:%v", volume.Name, node, path)
+		klog.Infof("Deleting volume %v at %v:%v", volume.Name, node, path)
 		va := volumeAction{
 			action:   actionTypeDelete,
 			name:     volume.Name,
@@ -145,12 +144,12 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 			size:     0,
 		}
 		if err := p.createProvisionerPod(va); err != nil {
-			klog.Info("clean up volume %v failed: %v", volume.Name, err)
+			klog.Infof("clean up volume %v failed: %v", volume.Name, err)
 			return err
 		}
 		return nil
 	}
-	klog.Info("Retained volume %v", volume.Name)
+	klog.Infof("Retained volume %v", volume.Name)
 	return nil
 }
 
