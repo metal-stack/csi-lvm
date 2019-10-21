@@ -20,7 +20,7 @@ Dynamic provisioning the volume using host path.
 
 * Currently the Kubernetes [Local Volume provisioner](https://github.com/kubernetes-incubator/external-storage/tree/master/local-volume) cannot do dynamic provisioning for the host path volumes.
 * Support for volume capacity limit.
-* Performance speedup if more than one local disk is available because it defaults the created lv´s to stripe across all physical volumes.
+* Performance speedup if more than one local disk is available because it defaults for the created lv´s to stripe across all physical volumes.
 
 ## Requirement
 
@@ -180,7 +180,7 @@ metadata:
   name: lvm-pvc-not-striped
   namespace: default
   annotations:
-    "striped.metal-pod.io/csi-lvm": "false"
+    striped.metal-pod.io/csi-lvm: "false"
 spec:
   accessModes:
     - ReadWriteOnce
