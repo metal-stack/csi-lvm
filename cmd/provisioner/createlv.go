@@ -51,7 +51,7 @@ func createLV(c *cli.Context) error {
 	if lvName == "" {
 		return fmt.Errorf("invalid empty flag %v", flagLVName)
 	}
-	lvSize := c.Uint64(flagLVSize) * 1024 * 1024
+	lvSize := c.Uint64(flagLVSize)
 	if lvSize == 0 {
 		return fmt.Errorf("invalid empty flag %v", flagLVSize)
 	}
@@ -98,7 +98,8 @@ func createLV(c *cli.Context) error {
 		return fmt.Errorf("unable to create lv: %v output:%s", err, output)
 	}
 
-	output, err = mountLV(lvName, vgName, dirName)
+	// output, err = mountLV(lvName, vgName, dirName)
+	output, err = mountLV(lvName, vgName, "/data")
 	if err != nil {
 		return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
 	}
@@ -109,10 +110,12 @@ func createLV(c *cli.Context) error {
 
 func devices(devicesPattern []string) (devices []string, err error) {
 	for _, devicePattern := range devicesPattern {
-		matches, err := filepath.Glob(filepath.Join("/dev", devicePattern))
+		log.Printf("search devices :%s ", devicePattern)
+		matches, err := filepath.Glob(devicePattern)
 		if err != nil {
 			return nil, err
 		}
+		log.Printf("found: %s", matches)
 		devices = append(devices, matches...)
 	}
 	return devices, nil
@@ -146,6 +149,7 @@ func createVG(name string, physicalVolumes []string, tags []string) (string, err
 	for _, tag := range tags {
 		args = append(args, "--add-tag", tag)
 	}
+	log.Printf("create vg with command: vgcreate %v", args)
 	cmd := exec.Command("vgcreate", args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err

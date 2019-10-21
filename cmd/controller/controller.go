@@ -168,14 +168,14 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 		return fmt.Errorf("invalid empty name or path or node")
 	}
 
-	command := []string{}
+	command := []string{"/csi-lvm-provisioner"}
 	if va.action == actionTypeCreate {
 		command = append(command, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--devices", p.devicePattern)
 	}
-	if va.action == actionTypeCreate {
+	if va.action == actionTypeDelete {
 		command = append(command, "deletelv")
 	}
-	command = append(command, "--lvname", va.name, "--vgname", "vg-csi-lvm", "--directory", p.lvDir)
+	command = append(command, "--lvname", va.name, "--vgname", "csi-lvm", "--directory", p.lvDir)
 
 	klog.Infof("start provisionerPod with command:%s", command)
 	hostPathType := v1.HostPathDirectoryOrCreate

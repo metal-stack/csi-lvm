@@ -13,8 +13,8 @@ controller:
 
 .PHONY: dockerimages
 dockerimages:
-	docker build -t metalpod/csi-lvm-controller:latest . -f cmd/controller/Dockerfile
 	docker build -t metalpod/csi-lvm-provisioner:latest . -f cmd/provisioner/Dockerfile
+	docker build -t metalpod/csi-lvm-controller:latest . -f cmd/controller/Dockerfile
 
 .PHONY: dockerpush
 dockerpush:
