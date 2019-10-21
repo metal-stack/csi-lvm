@@ -11,3 +11,19 @@ spec:
   resources:
     requests:
       storage: 50Mi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lvm-pvc-not-striped
+  namespace: default
+  annotations:
+    "striped.metal-pod.io/csi-lvm": "false"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: csi-lvm
+  resources:
+    requests:
+      storage: 50Mi

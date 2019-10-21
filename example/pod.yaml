@@ -12,6 +12,8 @@ spec:
     volumeMounts:
     - name: volv
       mountPath: /data
+    - name: volz
+      mountPath: /data2
     ports:
     - containerPort: 80
     resources:
@@ -22,3 +24,6 @@ spec:
   - name: volv
     persistentVolumeClaim:
       claimName: lvm-pvc
+  - name: volz
+    persistentVolumeClaim:
+      claimName: lvm-pvc-not-striped

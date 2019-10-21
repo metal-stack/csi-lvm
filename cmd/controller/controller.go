@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"strconv"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -18,9 +19,10 @@ import (
 )
 
 const (
-	keyNode          = "kubernetes.io/hostname"
-	actionTypeCreate = "create"
-	actionTypeDelete = "delete"
+	keyNode           = "kubernetes.io/hostname"
+	stripedAnnotation = "striped.metal-pod.io/csi-lvm"
+	actionTypeCreate  = "create"
+	actionTypeDelete  = "delete"
 )
 
 type actionType string
@@ -55,6 +57,7 @@ type volumeAction struct {
 	path     string
 	nodeName string
 	size     int64
+	striped  bool
 }
 
 // Provision creates a storage asset and returns a PV object representing it.
@@ -67,10 +70,17 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	name := options.PVName
 	path := path.Join(p.lvDir, name)
 
-	klog.Infof("Creating volume %v at %v:%v", name, node.Name, path)
+	striped := true
+	var err error
+	a, ok := options.PVC.Annotations[stripedAnnotation]
+	if ok {
+		striped, err = strconv.ParseBool(a)
+		if err != nil {
+			klog.Errorf("striped annotation must be either 'true|false' but is %s error:%v", stripedAnnotation, err)
+		}
+	}
 
-	klog.Infof("pvc resource requests: %v", options.PVC.Spec.Resources.Requests)
-	// requests, ok := options.PVC.Spec.Resources.Requests.StorageEphemeral().AsInt64()
+	klog.Infof("Creating volume %v at %v:%v", name, node.Name, path)
 	requests, ok := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
 	if !ok {
 		return nil, fmt.Errorf("configuration error, no volume size was specified")
@@ -86,6 +96,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		path:     path,
 		nodeName: node.Name,
 		size:     size,
+		striped:  striped,
 	}
 	if err := p.createProvisionerPod(va); err != nil {
 		klog.Errorf("error creating provisioner pod :%v", err)
@@ -167,6 +178,9 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	args := []string{}
 	if va.action == actionTypeCreate {
 		args = append(args, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--devices", p.devicePattern)
+		if va.striped {
+			args = append(args, "--striped")
+		}
 	}
 	if va.action == actionTypeDelete {
 		args = append(args, "deletelv")

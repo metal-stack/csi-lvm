@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/google/lvmd/commands"
 	"github.com/urfave/cli"
@@ -32,6 +34,10 @@ func createLVCmd() cli.Command {
 			cli.StringFlag{
 				Name:  flagDirectory,
 				Usage: "Required. the name of the directory to mount the lv",
+			},
+			cli.BoolFlag{
+				Name:  flagStriped,
+				Usage: "Optional. if set to true, lv´s are striped across all pv´s",
 			},
 			cli.StringSliceFlag{
 				Name:  flagDevicesPattern,
@@ -67,8 +73,9 @@ func createLV(c *cli.Context) error {
 	if len(devicesPattern) == 0 {
 		return fmt.Errorf("invalid empty flag %v", flagDevicesPattern)
 	}
+	striped := c.Bool(flagStriped)
 
-	log.Printf("create lv %s size:%d vg:%s devices:%s dir:%s", lvName, lvSize, vgName, devicesPattern, dirName)
+	log.Printf("create lv %s size:%d vg:%s devices:%s dir:%s striped:%t", lvName, lvSize, vgName, devicesPattern, dirName, striped)
 
 	vgs, err := commands.ListVG(context.Background())
 	if err != nil {
@@ -93,7 +100,7 @@ func createLV(c *cli.Context) error {
 		}
 	}
 	tags := []string{"lv.metal-pod.io/csi-lvm"}
-	output, err := commands.CreateLV(context.Background(), vgName, lvName, lvSize, 0, tags)
+	output, err := createLVS(context.Background(), vgName, lvName, lvSize, striped, tags)
 	if err != nil {
 		return fmt.Errorf("unable to create lv: %v output:%s", err, output)
 	}
@@ -156,4 +163,44 @@ func createVG(name string, physicalVolumes []string, tags []string) (string, err
 	cmd := exec.Command("vgcreate", args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
+}
+
+// createLV creates a new volume
+func createLVS(ctx context.Context, vg string, name string, size uint64, striped bool, tags []string) (string, error) {
+	if size == 0 {
+		return "", fmt.Errorf("size must be greater than 0")
+	}
+
+	args := []string{"-v", "-n", name, "-W", "y", "-L", fmt.Sprintf("%db", size)}
+	if striped {
+		pvs, err := pvCount(vg)
+		if err != nil {
+			return "", err
+		}
+		if pvs > 1 {
+			args = append(args, "--type", "striped", "--stripes", fmt.Sprintf("%d", pvs))
+		}
+	}
+	for _, tag := range tags {
+		args = append(args, "--add-tag", tag)
+	}
+	args = append(args, vg)
+	log.Printf("lvreate %s", args)
+	cmd := exec.Command("lvcreate", args...)
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+func pvCount(vgname string) (int, error) {
+	cmd := exec.Command("vgs", vgname, "--noheadings", "-o", "pv_count")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, err
+	}
+	outStr := strings.TrimSpace(string(out))
+	count, err := strconv.Atoi(outStr)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
