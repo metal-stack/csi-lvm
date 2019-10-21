@@ -68,10 +68,17 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 
 	klog.Infof("Creating volume %v at %v:%v", name, node.Name, path)
 
-	size, ok := options.PVC.Spec.Resources.Limits.StorageEphemeral().AsInt64()
+	klog.Infof("pvc resource requests: %v", options.PVC.Spec.Resources.Requests)
+	// requests, ok := options.PVC.Spec.Resources.Requests.StorageEphemeral().AsInt64()
+	requests, ok := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
 	if !ok {
 		return nil, fmt.Errorf("configuration error, no volume size was specified")
 	}
+	size, ok := requests.AsInt64()
+	if !ok {
+		return nil, fmt.Errorf("configuration error, no volume size not readable")
+	}
+
 	va := volumeAction{
 		action:   actionTypeCreate,
 		name:     name,
@@ -161,13 +168,14 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 		return fmt.Errorf("invalid empty name or path or node")
 	}
 
-	command := []string{"/csi-lvm-provisioner", "--lvname", va.name, "--vgname", "vg-csi-lvm", "--directory", p.lvDir}
+	command := []string{}
 	if va.action == actionTypeCreate {
-		command = append(command, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--pvs", p.devicePattern)
+		command = append(command, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--devices", p.devicePattern)
 	}
 	if va.action == actionTypeCreate {
 		command = append(command, "deletelv")
 	}
+	command = append(command, "--lvname", va.name, "--vgname", "vg-csi-lvm", "--directory", p.lvDir)
 
 	klog.Infof("start provisionerPod with command:%s", command)
 	hostPathType := v1.HostPathDirectoryOrCreate

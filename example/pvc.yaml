@@ -10,4 +10,4 @@ spec:
   storageClassName: csi-lvm
   resources:
     requests:
-      storage: 2Gi
+      storage: 50Mi
