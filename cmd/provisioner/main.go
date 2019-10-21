@@ -34,7 +34,7 @@ func main() {
 	p.CommandNotFound = cmdNotFound
 	p.OnUsageError = onUsageError
 
-	fmt.Println("starting csi-lvm-provisioner")
+	log.Println("starting csi-lvm-provisioner")
 
 	if err := p.Run(os.Args); err != nil {
 		log.Fatalf("Critical error: %v", err)

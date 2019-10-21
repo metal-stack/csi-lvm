@@ -1,16 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"path"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	k8serror "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
-
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 
 	"k8s.io/klog"
@@ -87,6 +88,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		size:     size,
 	}
 	if err := p.createProvisionerPod(va); err != nil {
+		klog.Errorf("error creating provisioner pod :%v", err)
 		return nil, err
 	}
 
@@ -134,9 +136,6 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 // Delete removes the storage asset that was created by Provision represented
 // by the given PV.
 func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
-	defer func() {
-		err = fmt.Errorf("failed to delete volume %v, err:%v", volume.Name, err)
-	}()
 	path, node, err := p.getPathAndNodeForPV(volume)
 	if err != nil {
 		return err
@@ -161,9 +160,6 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 }
 
 func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
-	defer func() {
-		err = fmt.Errorf("failed to %v volume %v err:%v", va.action, va.name, err)
-	}()
 	if va.name == "" || va.path == "" || va.nodeName == "" {
 		return fmt.Errorf("invalid empty name or path or node")
 	}
@@ -179,6 +175,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 
 	klog.Infof("start provisionerPod with args:%s", args)
 	hostPathType := v1.HostPathDirectoryOrCreate
+	mountPropagation := v1.MountPropagationBidirectional
 	privileged := true
 	provisionerPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -199,9 +196,10 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 					Args:  args,
 					VolumeMounts: []v1.VolumeMount{
 						{
-							Name:      "data",
-							ReadOnly:  false,
-							MountPath: "/data/",
+							Name:             "data",
+							ReadOnly:         false,
+							MountPath:        "/data",
+							MountPropagation: &mountPropagation,
 						},
 						{
 							Name:      "devices",
@@ -209,10 +207,20 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 							MountPath: "/dev",
 						},
 					},
-					// FIXME set to allways
+					// FIXME set to always
 					ImagePullPolicy: v1.PullIfNotPresent,
 					SecurityContext: &v1.SecurityContext{
 						Privileged: &privileged,
+					},
+					Resources: v1.ResourceRequirements{
+						Requests: v1.ResourceList{
+							"cpu":    resource.MustParse("50m"),
+							"memory": resource.MustParse("50Mi"),
+						},
+						Limits: v1.ResourceList{
+							"cpu":    resource.MustParse("100m"),
+							"memory": resource.MustParse("100Mi"),
+						},
 					},
 				},
 			},
@@ -247,15 +255,17 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	}
 
 	defer func() {
-		e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(provisionerPod.Name, &metav1.DeleteOptions{})
-		if e != nil {
-			logrus.Errorf("unable to delete the provisioner pod: %v", e)
-		}
+		// e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(provisionerPod.Name, &metav1.DeleteOptions{})
+		// if e != nil {
+		// 	klog.Errorf("unable to delete the provisioner pod: %v", e)
+		// }
 	}()
 
 	completed := false
 	for i := 0; i < 20; i++ {
 		if pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(provisionerPod.Name, metav1.GetOptions{}); err != nil {
+			logs := getPodLogs(p.kubeClient, pod)
+			klog.Errorf("provisioner pod logs: %s", logs)
 			return err
 		} else if pod.Status.Phase == v1.PodSucceeded {
 			completed = true
@@ -267,15 +277,29 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 		return fmt.Errorf("create process timeout after %v seconds", 20)
 	}
 
-	klog.Info("Volume %v has been %vd on %v:%v", va.name, va.action, va.nodeName, va.path)
+	klog.Infof("Volume %v has been %vd on %v:%v", va.name, va.action, va.nodeName, va.path)
 	return nil
 }
 
-func (p *lvmProvisioner) getPathAndNodeForPV(pv *v1.PersistentVolume) (path, node string, err error) {
-	defer func() {
-		err = fmt.Errorf("failed to delete volume %v err:%v", pv.Name, err)
-	}()
+func getPodLogs(kubeClient clientset.Interface, pod *v1.Pod) string {
+	podLogOpts := v1.PodLogOptions{}
+	req := kubeClient.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
+	podLogs, err := req.Stream()
+	if err != nil {
+		return "error in opening stream"
+	}
+	defer podLogs.Close()
 
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "error in copy information from podLogs to buf"
+	}
+	str := buf.String()
+	return str
+}
+
+func (p *lvmProvisioner) getPathAndNodeForPV(pv *v1.PersistentVolume) (path, node string, err error) {
 	hostPath := pv.Spec.PersistentVolumeSource.HostPath
 	if hostPath == nil {
 		return "", "", fmt.Errorf("no HostPath set")

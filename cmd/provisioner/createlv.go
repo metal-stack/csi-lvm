@@ -135,11 +135,14 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 		return string(out), fmt.Errorf("unable to create mount directory for lv:%s err:%v", lvname, err)
 	}
 
-	cmd = exec.Command("mount", "-t", "ext4", lvPath, mountPath)
+	mountArgs := []string{"--make-shared", "-t", "ext4", lvPath, mountPath}
+	log.Printf("mountlv command: mount %s", mountArgs)
+	cmd = exec.Command("mount", mountArgs...)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return string(out), fmt.Errorf("unable to mount %s to %s err:%v", lvPath, mountPath, err)
+		return string(out), fmt.Errorf("unable to mount %s to %s err:%v output:%s", lvPath, mountPath, err, out)
 	}
+	log.Printf("mountlv output:%s", out)
 	return "", nil
 }
 
