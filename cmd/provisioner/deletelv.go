@@ -68,7 +68,7 @@ func umountLV(lvname, vgname, directory string) (string, error) {
 	lvPath := fmt.Sprintf("/dev/%s/%s", vgname, lvname)
 	mountPath := path.Join(directory, lvname)
 
-	cmd := exec.Command("umount", mountPath)
+	cmd := exec.Command("umount", lvPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(out), fmt.Errorf("unable to umount %s from %s err:%v", lvPath, mountPath, err)

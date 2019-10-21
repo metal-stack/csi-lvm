@@ -255,10 +255,10 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	}
 
 	defer func() {
-		// e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(provisionerPod.Name, &metav1.DeleteOptions{})
-		// if e != nil {
-		// 	klog.Errorf("unable to delete the provisioner pod: %v", e)
-		// }
+		e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(provisionerPod.Name, &metav1.DeleteOptions{})
+		if e != nil {
+			klog.Errorf("unable to delete the provisioner pod: %v", e)
+		}
 	}()
 
 	completed := false
