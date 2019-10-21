@@ -168,16 +168,16 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 		return fmt.Errorf("invalid empty name or path or node")
 	}
 
-	command := []string{"/csi-lvm-provisioner"}
+	args := []string{}
 	if va.action == actionTypeCreate {
-		command = append(command, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--devices", p.devicePattern)
+		args = append(args, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--devices", p.devicePattern)
 	}
 	if va.action == actionTypeDelete {
-		command = append(command, "deletelv")
+		args = append(args, "deletelv")
 	}
-	command = append(command, "--lvname", va.name, "--vgname", "csi-lvm", "--directory", p.lvDir)
+	args = append(args, "--lvname", va.name, "--vgname", "csi-lvm", "--directory", p.lvDir)
 
-	klog.Infof("start provisionerPod with command:%s", command)
+	klog.Infof("start provisionerPod with args:%s", args)
 	hostPathType := v1.HostPathDirectoryOrCreate
 	privileged := true
 	provisionerPod := &v1.Pod{
@@ -194,9 +194,9 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 			},
 			Containers: []v1.Container{
 				{
-					Name:    "csi-lvm-" + string(va.action),
-					Image:   p.provisionerImage,
-					Command: command,
+					Name:  "csi-lvm-" + string(va.action),
+					Image: p.provisionerImage,
+					Args:  args,
 					VolumeMounts: []v1.VolumeMount{
 						{
 							Name:      "data",
@@ -209,6 +209,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 							MountPath: "/dev",
 						},
 					},
+					// FIXME set to allways
 					ImagePullPolicy: v1.PullIfNotPresent,
 					SecurityContext: &v1.SecurityContext{
 						Privileged: &privileged,
@@ -248,7 +249,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	defer func() {
 		e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(provisionerPod.Name, &metav1.DeleteOptions{})
 		if e != nil {
-			logrus.Errorf("unable to delete the helper pod: %v", e)
+			logrus.Errorf("unable to delete the provisioner pod: %v", e)
 		}
 	}()
 
