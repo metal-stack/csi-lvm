@@ -165,7 +165,7 @@ spec:
 
 ### PVC Striped
 
-By default the pvc will be a stripe across all found block devices specified by the above grok pattern. The means that all blocks written are spread across 4 devices in chunks. This gives ~4 times the read/write performance for the volume, but also a 4 times higher risk of dataloss in case a single disk fails. If you do not want higher performance but more safety, you can disable that with:
+By default the pvc will be a stripe across all found block devices specified by the above grok pattern. That means that all blocks written are spread across 4 devices in chunks. This gives ~4 times the read/write performance for the volume, but also a 4 times higher risk of data loss in case a single disk fails. If you do not want higher performance but more safety, you can disable that with:
 
 ```yaml
 apiVersion: v1
