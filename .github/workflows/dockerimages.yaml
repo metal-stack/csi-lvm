@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - master
+    tags:
+      - '*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - uses: olegtarasov/get-tag@j1
+      id: tagName
     - name: Build the Docker images
       run: |
         docker login -u metalpod -p ${{ secrets.DOCKER_HUB_TOKEN }}
