@@ -26,6 +26,15 @@ Kubernetes v1.12+.
 
 In this setup, the directory `/tmp/csi-lvm/<name of the pv>` will be used across all the nodes as the path for provisioning (a.k.a, store the persistent volume data). The provisioner will be installed in `csi-lvm` namespace by default.
 
+The default grok pattern for disks to use is `/dev/nvme[0-9]n*`, please check if this matches your setup, otherwise, copy *controller.yaml* to your local machine and modify the value of `CSI_LVM_DEVICE_PATTERN` accordingly.
+
+```yaml
+- name: CSI_LVM_DEVICE_PATTERN
+  value: /dev/nvme[0-9]n*"
+```
+
+If this is set you can install the csi-lvm with:
+
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/deploy/controller.yaml
 ```

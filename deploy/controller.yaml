@@ -80,4 +80,6 @@ spec:
         - name: CSI_LVM_PROVISIONER_IMAGE
           value: "metalpod/csi-lvm-provisioner"
         - name: CSI_LVM_DEVICE_PATTERN
-          value: "/dev/loop[0,1]"
+          value: /dev/nvme[0-9]n*"
+          # value: /dev/sd[abcd]*"
+          # value: /dev/loop[0-9]*"
