@@ -4,7 +4,13 @@
 
 ## Overview
 
-CSI LVM Provisioner provides a way for the Kubernetes users to utilize the local storage in each node. Based on the user configuration, the LVM Provisioner will create `hostPath` based persistent volume on the node automatically. It utilizes the features introduced by Kubernetes [Local Persistent Volume feature](https://kubernetes.io/blog/2018/04/13/local-persistent-volumes-beta/), but make it a simpler solution than the built-in `local` volume feature in Kubernetes. It created a LVM logical volume on the local disks. A grok pattern, which disks to use can be specified. This Provisioner is derived from the [Local Path Provisioner](https://github.com/rancher/local-path-provisioner).
+CSI LVM Provisioner utilizes local storage of Kubernetes nodes to provide persistent storage for pods.
+
+It automatically creates `hostPath` based persistent volumes on the nodes and makes use of the [Local Persistent Volume feature](https://kubernetes.io/blog/2018/04/13/local-persistent-volumes-beta/) introduced by Kubernetes 1.10 but it's simpler to use than the built-in `local` volume feature in Kubernetes. 
+
+Underneath it creates a LVM logical volume on the local disks. A grok pattern, which disks to use can be specified.
+
+This Provisioner is derived from the [Local Path Provisioner](https://github.com/rancher/local-path-provisioner).
 
 ## Compare to Local Path Provisioner
 
