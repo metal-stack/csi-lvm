@@ -27,6 +27,8 @@ var (
 	defaultProvisionerImage = "metalpod/csi-lvm-provisioner"
 	flagDevicePattern       = "device-pattern"
 	envDevicePattern        = "CSI_LVM_DEVICE_PATTERN"
+	flagDefaultLVMType      = "default-lvm-type"
+	envDefaultLVMType       = "CSI_LVM_DEFAULT_LVM_TYPE"
 )
 
 func cmdNotFound(c *cli.Context, command string) {
@@ -74,6 +76,12 @@ func startCmd() cli.Command {
 				Usage:  "Required. The pattern of the disk devices on the node to use",
 				EnvVar: envDevicePattern,
 			},
+			cli.StringFlag{
+				Name:   flagDefaultLVMType,
+				Usage:  "Optional. the default lvm type to use, must be one of linear|striped|mirror",
+				EnvVar: envDefaultLVMType,
+				Value:  mirrorType,
+			},
 		},
 		Action: func(c *cli.Context) {
 			if err := startDaemon(c); err != nil {
@@ -119,7 +127,12 @@ func startDaemon(c *cli.Context) error {
 		return fmt.Errorf("invalid empty flag %v", flagDevicePattern)
 	}
 
-	provisioner := NewLVMProvisioner(kubeClient, namespace, "/tmp/csi-lvm", devicePattern, provisionerImage)
+	defaultLVMType := c.String(flagDefaultLVMType)
+	if defaultLVMType == "" {
+		return fmt.Errorf("invalid empty flag %v", flagDefaultLVMType)
+	}
+
+	provisioner := NewLVMProvisioner(kubeClient, namespace, "/tmp/csi-lvm", devicePattern, provisionerImage, defaultLVMType)
 	if err != nil {
 		return err
 	}

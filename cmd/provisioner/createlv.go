@@ -15,6 +15,12 @@ import (
 	"github.com/urfave/cli"
 )
 
+const (
+	linearType  = "linear"
+	stripedType = "striped"
+	mirrorType  = "mirror"
+)
+
 func createLVCmd() cli.Command {
 	return cli.Command{
 		Name: "createlv",
@@ -35,9 +41,9 @@ func createLVCmd() cli.Command {
 				Name:  flagDirectory,
 				Usage: "Required. the name of the directory to mount the lv",
 			},
-			cli.BoolFlag{
-				Name:  flagStriped,
-				Usage: "Optional. if set to true, lv´s are striped across all pv´s",
+			cli.StringFlag{
+				Name:  flagLVMType,
+				Usage: "Optional. type of lvs, can be either striped or mirrored",
 			},
 			cli.StringSliceFlag{
 				Name:  flagDevicesPattern,
@@ -73,9 +79,9 @@ func createLV(c *cli.Context) error {
 	if len(devicesPattern) == 0 {
 		return fmt.Errorf("invalid empty flag %v", flagDevicesPattern)
 	}
-	striped := c.Bool(flagStriped)
+	lvmType := c.String(flagLVMType)
 
-	log.Printf("create lv %s size:%d vg:%s devices:%s dir:%s striped:%t", lvName, lvSize, vgName, devicesPattern, dirName, striped)
+	log.Printf("create lv %s size:%d vg:%s devices:%s dir:%s type:%s", lvName, lvSize, vgName, devicesPattern, dirName, lvmType)
 
 	vgs, err := commands.ListVG(context.Background())
 	if err != nil {
@@ -100,7 +106,7 @@ func createLV(c *cli.Context) error {
 		}
 	}
 	tags := []string{"lv.metal-pod.io/csi-lvm"}
-	output, err := createLVS(context.Background(), vgName, lvName, lvSize, striped, tags)
+	output, err := createLVS(context.Background(), vgName, lvName, lvSize, lvmType, tags)
 	if err != nil {
 		return fmt.Errorf("unable to create lv: %v output:%s", err, output)
 	}
@@ -166,21 +172,33 @@ func createVG(name string, physicalVolumes []string, tags []string) (string, err
 }
 
 // createLV creates a new volume
-func createLVS(ctx context.Context, vg string, name string, size uint64, striped bool, tags []string) (string, error) {
+func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string, tags []string) (string, error) {
 	if size == 0 {
 		return "", fmt.Errorf("size must be greater than 0")
 	}
 
 	args := []string{"-v", "-n", name, "-W", "y", "-L", fmt.Sprintf("%db", size)}
-	if striped {
-		pvs, err := pvCount(vg)
-		if err != nil {
-			return "", err
-		}
-		if pvs > 1 {
-			args = append(args, "--type", "raid1", "--mirrors", "1", "--nosync")
-		}
+
+	pvs, err := pvCount(vg)
+	if err != nil {
+		return "", fmt.Errorf("unable to determine pv count of vg: %v", err)
 	}
+	switch lvmType {
+	case stripedType:
+		if pvs < 2 {
+			return "", fmt.Errorf("cannot use type %s when pv count is smaller than 2", lvmType)
+		}
+		args = append(args, "--type", "striped", "--stripes", fmt.Sprintf("%d", pvs))
+	case mirrorType:
+		if pvs < 2 {
+			return "", fmt.Errorf("cannot use type %s when pv count is smaller than 2", lvmType)
+		}
+		args = append(args, "--type", "raid1", "--mirrors", "1", "--nosync")
+	case linearType:
+	default:
+		return "", fmt.Errorf("unsupport lvmtype: %s", lvmType)
+	}
+
 	for _, tag := range tags {
 		args = append(args, "--add-tag", tag)
 	}

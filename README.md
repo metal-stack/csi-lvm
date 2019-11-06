@@ -20,7 +20,7 @@ Dynamic provisioning the volume using host path.
 
 * Currently the Kubernetes [Local Volume provisioner](https://github.com/kubernetes-incubator/external-storage/tree/master/local-volume) cannot do dynamic provisioning for the host path volumes.
 * Support for volume capacity limit.
-* Performance speedup if more than one local disk is available because it defaults for the created lv´s to stripe across all physical volumes.
+* Performance speedup if more than one local disk is available because it can create lv´s which are stripe across all physical volumes.
 
 ## Requirement
 
@@ -178,18 +178,54 @@ spec:
 
 `CSI_LVM_DEVICE_PATTERN` is a grok pattern to specify which block devices to use for lvm devices on the node. This can be for example `/dev/sd[bcde]` if you want to use only /dev/sdb - /dev/sde.
 
-### PVC Striped
+### PVC Striped, Mirrored
 
-By default the pvc will be a stripe across all found block devices specified by the above grok pattern. That means that all blocks written are spread across 4 devices in chunks. This gives ~4 times the read/write performance for the volume, but also a 4 times higher risk of data loss in case a single disk fails. If you do not want higher performance but more safety, you can disable that with:
+By default the LV´s are created in *linear* mode on the devices specified by the grok pattern, beginning on the first found device. If this is full, the next LV will be created on the next device and so forth.
+
+If *mirrored* is set, all block will be mirrored with one additional copy to a additional disk found if more than one disk is present.
+
+If *striped* is set, the pvc will be a stripe across all found block devices specified by the above grok pattern. That means that all blocks written are spread across 4 devices in chunks. This gives ~4 times the read/write performance for the volume, but also a 4 times higher risk of data loss in case a single disk fails. If you do not want higher performance but more safety, you can disable that with:
 
 ```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: lvm-pvc-not-striped
+  name: lvm-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: csi-lvm
+  resources:
+    requests:
+      storage: 50Mi
+```
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lvm-pvc-striped
   namespace: default
   annotations:
-    striped.metal-pod.io/csi-lvm: "false"
+    csi-lvm.metal-pod.io/type: "striped"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: csi-lvm
+  resources:
+    requests:
+      storage: 50Mi
+```
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lvm-pvc-mirrored
+  namespace: default
+  annotations:
+    csi-lvm.metal-pod.io/type: "mirror"
 spec:
   accessModes:
     - ReadWriteOnce

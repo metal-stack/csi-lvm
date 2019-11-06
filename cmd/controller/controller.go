@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"path"
-	"strconv"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -19,10 +18,13 @@ import (
 )
 
 const (
-	keyNode           = "kubernetes.io/hostname"
-	stripedAnnotation = "striped.metal-pod.io/csi-lvm"
-	actionTypeCreate  = "create"
-	actionTypeDelete  = "delete"
+	keyNode          = "kubernetes.io/hostname"
+	typeAnnotation   = "csi-lvm.metal-pod.io/type"
+	linearType       = "linear"
+	stripedType      = "striped"
+	mirrorType       = "mirror"
+	actionTypeCreate = "create"
+	actionTypeDelete = "delete"
 )
 
 type actionType string
@@ -36,16 +38,19 @@ type lvmProvisioner struct {
 	provisionerImage string
 	kubeClient       clientset.Interface
 	namespace        string
+	// defaultLVMType the lvm type to use by default if not overwritten in the pvc spec.
+	defaultLVMType string
 }
 
 // NewLVMProvisioner creates a new hostpath provisioner
-func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage string) controller.Provisioner {
+func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage, defaultLVMType string) controller.Provisioner {
 	return &lvmProvisioner{
 		lvDir:            lvDir,
 		devicePattern:    devicePattern,
 		provisionerImage: provisionerImage,
 		kubeClient:       kubeClient,
 		namespace:        namespace,
+		defaultLVMType:   defaultLVMType,
 	}
 }
 
@@ -57,7 +62,7 @@ type volumeAction struct {
 	path     string
 	nodeName string
 	size     int64
-	striped  bool
+	lvmType  string
 }
 
 // Provision creates a storage asset and returns a PV object representing it.
@@ -70,14 +75,16 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	name := options.PVName
 	path := path.Join(p.lvDir, name)
 
-	striped := true
-	var err error
-	a, ok := options.PVC.Annotations[stripedAnnotation]
+	lvmType := p.defaultLVMType
+	a, ok := options.PVC.Annotations[typeAnnotation]
 	if ok {
-		striped, err = strconv.ParseBool(a)
-		if err != nil {
-			klog.Errorf("striped annotation must be either 'true|false' but is %s error:%v", stripedAnnotation, err)
-		}
+		lvmType = a
+	}
+	switch lvmType {
+	case stripedType, mirrorType, linearType:
+		lvmType = a
+	default:
+		return nil, fmt.Errorf("configuration error, lvmtype %s is invalid", a)
 	}
 
 	klog.Infof("Creating volume %v at %v:%v", name, node.Name, path)
@@ -96,7 +103,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		path:     path,
 		nodeName: node.Name,
 		size:     size,
-		striped:  striped,
+		lvmType:  lvmType,
 	}
 	if err := p.createProvisionerPod(va); err != nil {
 		klog.Errorf("error creating provisioner pod :%v", err)
@@ -178,9 +185,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	args := []string{}
 	if va.action == actionTypeCreate {
 		args = append(args, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--devices", p.devicePattern)
-		if va.striped {
-			args = append(args, "--striped")
-		}
+		args = append(args, "--lvmtype", va.lvmType)
 	}
 	if va.action == actionTypeDelete {
 		args = append(args, "deletelv")
