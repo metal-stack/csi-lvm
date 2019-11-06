@@ -76,15 +76,16 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	path := path.Join(p.lvDir, name)
 
 	lvmType := p.defaultLVMType
-	a, ok := options.PVC.Annotations[typeAnnotation]
+
+	userAnnotation, ok := options.PVC.Annotations[typeAnnotation]
 	if ok {
-		lvmType = a
+		lvmType = userAnnotation
 	}
+
 	switch lvmType {
 	case stripedType, mirrorType, linearType:
-		lvmType = a
 	default:
-		return nil, fmt.Errorf("configuration error, lvmtype %s is invalid", a)
+		return nil, fmt.Errorf("configuration error, lvmtype %s is invalid", lvmType)
 	}
 
 	klog.Infof("Creating volume %v at %v:%v", name, node.Name, path)
@@ -178,14 +179,13 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 }
 
 func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
-	if va.name == "" || va.path == "" || va.nodeName == "" {
-		return fmt.Errorf("invalid empty name or path or node")
+	if va.name == "" || va.path == "" || va.nodeName == "" || va.lvmType == "" {
+		return fmt.Errorf("invalid empty name or path or node or lvm type")
 	}
 
 	args := []string{}
 	if va.action == actionTypeCreate {
-		args = append(args, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--devices", p.devicePattern)
-		args = append(args, "--lvmtype", va.lvmType)
+		args = append(args, "createlv", "--lvsize", fmt.Sprintf("%d", va.size), "--devices", p.devicePattern, "--lvmtype", va.lvmType)
 	}
 	if va.action == actionTypeDelete {
 		args = append(args, "deletelv")

@@ -43,7 +43,7 @@ func createLVCmd() cli.Command {
 			},
 			cli.StringFlag{
 				Name:  flagLVMType,
-				Usage: "Optional. type of lvs, can be either striped or mirrored",
+				Usage: "Required. type of lvs, can be either striped or mirrored",
 			},
 			cli.StringSliceFlag{
 				Name:  flagDevicesPattern,
@@ -80,6 +80,9 @@ func createLV(c *cli.Context) error {
 		return fmt.Errorf("invalid empty flag %v", flagDevicesPattern)
 	}
 	lvmType := c.String(flagLVMType)
+	if lvmType == "" {
+		return fmt.Errorf("invalid empty flag %v", flagLVMType)
+	}
 
 	log.Printf("create lv %s size:%d vg:%s devices:%s dir:%s type:%s", lvName, lvSize, vgName, devicesPattern, dirName, lvmType)
 
