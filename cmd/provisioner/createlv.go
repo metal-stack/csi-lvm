@@ -178,7 +178,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, striped
 			return "", err
 		}
 		if pvs > 1 {
-			args = append(args, "--type", "striped", "--stripes", fmt.Sprintf("%d", pvs))
+			args = append(args, "--type", "raid1", "--mirrors", "1", "--nosync")
 		}
 	}
 	for _, tag := range tags {
