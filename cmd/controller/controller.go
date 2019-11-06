@@ -225,6 +225,11 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 							ReadOnly:  false,
 							MountPath: "/dev",
 						},
+						{
+							Name:      "modules",
+							ReadOnly:  false,
+							MountPath: "/lib/modules",
+						},
 					},
 					// FIXME set to always
 					ImagePullPolicy: v1.PullIfNotPresent,
@@ -258,6 +263,15 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 					VolumeSource: v1.VolumeSource{
 						HostPath: &v1.HostPathVolumeSource{
 							Path: "/dev",
+							Type: &hostPathType,
+						},
+					},
+				},
+				{
+					Name: "modules",
+					VolumeSource: v1.VolumeSource{
+						HostPath: &v1.HostPathVolumeSource{
+							Path: "/lib/modules",
 							Type: &hostPathType,
 						},
 					},
