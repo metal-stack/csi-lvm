@@ -80,6 +80,7 @@ spec:
         - name: CSI_LVM_PROVISIONER_IMAGE
           value: "metalpod/csi-lvm-provisioner"
         - name: CSI_LVM_DEVICE_PATTERN
-          value: /dev/nvme[0-9]n*"
-          # value: /dev/sd[abcd]*"
-          # value: /dev/loop[0-9]*"
+          # IMPORTANT: you cannot specify a wildcard (*) at any position in the devices grok.
+          # value: "/dev/nvme[0-9]n[0-9]"
+          # value: "/dev/sd[abcd]"
+          value: "/dev/loop[0-1]"

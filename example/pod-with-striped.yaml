@@ -2,18 +2,14 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: volume-test
+  name: volume-test-striped
   namespace: default
 spec:
   containers:
-  - name: volume-test
+  - name: volume-test-striped
     image: nginx:stable-alpine
     imagePullPolicy: IfNotPresent
     volumeMounts:
-    - name: linear
-      mountPath: /linear
-    - name: mirror
-      mountPath: /mirror
     - name: striped
       mountPath: /striped
     ports:
@@ -23,12 +19,6 @@ spec:
         cpu: 100m
         memory: 100M
   volumes:
-  - name: linear
-    persistentVolumeClaim:
-      claimName: lvm-pvc-linear
-  - name: mirror
-    persistentVolumeClaim:
-      claimName: lvm-pvc-mirror
   - name: striped
     persistentVolumeClaim:
       claimName: lvm-pvc-striped

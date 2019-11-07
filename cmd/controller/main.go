@@ -132,7 +132,7 @@ func startDaemon(c *cli.Context) error {
 		return fmt.Errorf("invalid empty flag %v", flagDefaultLVMType)
 	}
 
-	provisioner := NewLVMProvisioner(kubeClient, namespace, "/tmp/csi-lvm", devicePattern, provisionerImage, defaultLVMType)
+	provisioner := NewLVMProvisioner(kubeClient, namespace, "/data", devicePattern, provisionerImage, defaultLVMType)
 	if err != nil {
 		return err
 	}

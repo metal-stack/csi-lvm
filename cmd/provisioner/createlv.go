@@ -84,38 +84,19 @@ func createLV(c *cli.Context) error {
 		return fmt.Errorf("invalid empty flag %v", flagLVMType)
 	}
 
-	log.Printf("create lv %s size:%d vg:%s devices:%s dir:%s type:%s", lvName, lvSize, vgName, devicesPattern, dirName, lvmType)
+	log.Printf("create lv %s size:%d vg:%s devicespattern:%s dir:%s type:%s", lvName, lvSize, vgName, devicesPattern, dirName, lvmType)
 
-	vgs, err := commands.ListVG(context.Background())
+	output, err := createVG(vgName, devicesPattern)
 	if err != nil {
-		log.Printf("unable to list existing volumegroups:%v", err)
+		return fmt.Errorf("unable to create vg: %v output:%s", err, output)
 	}
-	vgexists := false
-	for _, vg := range vgs {
-		if vg.Name == vgName {
-			vgexists = true
-			break
-		}
-	}
-	if !vgexists {
-		devs, err := devices(devicesPattern)
-		if err != nil {
-			return fmt.Errorf("unable to lookup devices from devicesPattern %s, err:%v", devicesPattern, err)
-		}
-		tags := []string{"vg.metal-pod.io/csi-lvm"}
-		output, err := createVG(vgName, devs, tags)
-		if err != nil {
-			return fmt.Errorf("unable to create vg: %v output:%s", err, output)
-		}
-	}
-	tags := []string{"lv.metal-pod.io/csi-lvm"}
-	output, err := createLVS(context.Background(), vgName, lvName, lvSize, lvmType, tags)
+
+	output, err = createLVS(context.Background(), vgName, lvName, lvSize, lvmType)
 	if err != nil {
 		return fmt.Errorf("unable to create lv: %v output:%s", err, output)
 	}
 
-	// output, err = mountLV(lvName, vgName, dirName)
-	output, err = mountLV(lvName, vgName, "/data")
+	output, err = mountLV(lvName, vgName, dirName)
 	if err != nil {
 		return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
 	}
@@ -138,12 +119,29 @@ func devices(devicesPattern []string) (devices []string, err error) {
 }
 
 func mountLV(lvname, vgname, directory string) (string, error) {
+	// check for format with blkid /dev/csi-lvm/pvc-xxxxx
+	// /dev/dm-3: UUID="d1910e3a-32a9-48d2-aa2e-e5ad018237c9" TYPE="ext4"
 	lvPath := fmt.Sprintf("/dev/%s/%s", vgname, lvname)
-	mountPath := path.Join(directory, lvname)
-	cmd := exec.Command("mkfs.ext4", lvPath)
+
+	formatted := false
+	// check for already formatted
+	cmd := exec.Command("blkid", lvPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(out), fmt.Errorf("unable to format lv:%s err:%v", lvname, err)
+		log.Printf("unable to check if %s is already formatted:%v", lvPath, err)
+	}
+	if strings.Contains(string(out), "ext4") {
+		formatted = true
+	}
+
+	mountPath := path.Join(directory, lvname)
+	if !formatted {
+		log.Printf("formatting with mkfs.ext4 %s", lvPath)
+		cmd = exec.Command("mkfs.ext4", lvPath)
+		out, err = cmd.CombinedOutput()
+		if err != nil {
+			return string(out), fmt.Errorf("unable to format lv:%s err:%v", lvname, err)
+		}
 	}
 
 	err = os.MkdirAll(mountPath, 0777)
@@ -151,18 +149,44 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 		return string(out), fmt.Errorf("unable to create mount directory for lv:%s err:%v", lvname, err)
 	}
 
+	// --make-shared is required that this mount is visible outside this container.
 	mountArgs := []string{"--make-shared", "-t", "ext4", lvPath, mountPath}
 	log.Printf("mountlv command: mount %s", mountArgs)
 	cmd = exec.Command("mount", mountArgs...)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return string(out), fmt.Errorf("unable to mount %s to %s err:%v output:%s", lvPath, mountPath, err, out)
+		mountOutput := string(out)
+		if !strings.Contains(mountOutput, "already mounted") {
+			return string(out), fmt.Errorf("unable to mount %s to %s err:%v output:%s", lvPath, mountPath, err, out)
+		}
 	}
 	log.Printf("mountlv output:%s", out)
 	return "", nil
 }
 
-func createVG(name string, physicalVolumes []string, tags []string) (string, error) {
+func createVG(name string, devicesPattern []string) (string, error) {
+	vgs, err := commands.ListVG(context.Background())
+	if err != nil {
+		log.Printf("unable to list existing volumegroups:%v", err)
+	}
+	vgexists := false
+	for _, vg := range vgs {
+		log.Printf("compare vg:%s with:%s\n", vg.Name, name)
+		if vg.Name == name {
+			vgexists = true
+			break
+		}
+	}
+	if vgexists {
+		log.Printf("volumegroup: %s already exists\n", name)
+		return name, nil
+	}
+	physicalVolumes, err := devices(devicesPattern)
+	if err != nil {
+		return "", fmt.Errorf("unable to lookup devices from devicesPattern %s, err:%v", devicesPattern, err)
+	}
+	tags := []string{"vg.metal-pod.io/csi-lvm"}
+
 	args := []string{"-v", name}
 	args = append(args, physicalVolumes...)
 	for _, tag := range tags {
@@ -175,7 +199,25 @@ func createVG(name string, physicalVolumes []string, tags []string) (string, err
 }
 
 // createLV creates a new volume
-func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string, tags []string) (string, error) {
+func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string) (string, error) {
+	lvs, err := commands.ListLV(context.Background(), vg+"/"+name)
+	if err != nil {
+		log.Printf("unable to list existing logicalvolumes:%v", err)
+	}
+	lvExists := false
+	for _, lv := range lvs {
+		log.Printf("compare lv:%s with:%s\n", lv.Name, name)
+		if strings.Contains(lv.Name, name) {
+			lvExists = true
+			break
+		}
+	}
+
+	if lvExists {
+		log.Printf("logicalvolume: %s already exists\n", name)
+		return name, nil
+	}
+
 	if size == 0 {
 		return "", fmt.Errorf("size must be greater than 0")
 	}
@@ -199,9 +241,10 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 		args = append(args, "--type", "raid1", "--mirrors", "1", "--nosync")
 	case linearType:
 	default:
-		return "", fmt.Errorf("unsupport lvmtype: %s", lvmType)
+		return "", fmt.Errorf("unsupported lvmtype: %s", lvmType)
 	}
 
+	tags := []string{"lv.metal-pod.io/csi-lvm"}
 	for _, tag := range tags {
 		args = append(args, "--add-tag", tag)
 	}

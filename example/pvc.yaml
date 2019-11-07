@@ -2,28 +2,46 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: lvm-pvc
+  name: lvm-pvc-linear
   namespace: default
+  annotations:
+    csi-lvm.metal-pod.io/type: "linear"
 spec:
   accessModes:
     - ReadWriteOnce
   storageClassName: csi-lvm
   resources:
     requests:
-      storage: 50Mi
+      storage: 10Mi
 
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: lvm-pvc-not-striped
+  name: lvm-pvc-mirror
   namespace: default
   annotations:
-    striped.metal-pod.io/csi-lvm: "false"
+    csi-lvm.metal-pod.io/type: "mirror"
 spec:
   accessModes:
     - ReadWriteOnce
   storageClassName: csi-lvm
   resources:
     requests:
-      storage: 50Mi
+      storage: 10Mi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lvm-pvc-striped
+  namespace: default
+  annotations:
+    csi-lvm.metal-pod.io/type: "striped"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: csi-lvm
+  resources:
+    requests:
+      storage: 10Mi

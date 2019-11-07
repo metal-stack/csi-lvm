@@ -67,6 +67,7 @@ type volumeAction struct {
 
 // Provision creates a storage asset and returns a PV object representing it.
 func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.PersistentVolume, error) {
+	klog.Infof("start provision %s node:%s devices:%s", options.PVName, options.SelectedNode.GetName(), p.devicePattern)
 	node := options.SelectedNode
 	if node == nil {
 		return nil, fmt.Errorf("configuration error, no node was specified")
@@ -217,7 +218,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 						{
 							Name:             "data",
 							ReadOnly:         false,
-							MountPath:        "/data",
+							MountPath:        p.lvDir,
 							MountPropagation: &mountPropagation,
 						},
 						{
@@ -231,8 +232,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 							MountPath: "/lib/modules",
 						},
 					},
-					// FIXME set to always
-					ImagePullPolicy: v1.PullIfNotPresent,
+					ImagePullPolicy: v1.PullAlways,
 					SecurityContext: &v1.SecurityContext{
 						Privileged: &privileged,
 					},
@@ -295,19 +295,22 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	}()
 
 	completed := false
-	for i := 0; i < 20; i++ {
-		if pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(provisionerPod.Name, metav1.GetOptions{}); err != nil {
-			logs := getPodLogs(p.kubeClient, pod)
-			klog.Errorf("provisioner pod logs: %s", logs)
-			return err
+	retrySeconds := 20
+	for i := 0; i < retrySeconds; i++ {
+		pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(provisionerPod.Name, metav1.GetOptions{})
+		if err != nil {
+			klog.Errorf("error reading provisioner pod:%v", err)
 		} else if pod.Status.Phase == v1.PodSucceeded {
+			klog.Info("provisioner pod terminated successfully")
 			completed = true
 			break
 		}
+		logs := getPodLogs(p.kubeClient, pod)
+		klog.Infof("provisioner pod status:%s logs: %s", pod.Status.Phase, logs)
 		time.Sleep(1 * time.Second)
 	}
 	if !completed {
-		return fmt.Errorf("create process timeout after %v seconds", 20)
+		return fmt.Errorf("create process timeout after %v seconds", retrySeconds)
 	}
 
 	klog.Infof("Volume %v has been %vd on %v:%v", va.name, va.action, va.nodeName, va.path)
