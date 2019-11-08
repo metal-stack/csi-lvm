@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/lvmd/commands"
 	"github.com/urfave/cli"
+	"k8s.io/klog"
 )
 
 func deleteLVCmd() cli.Command {
@@ -76,10 +77,10 @@ func umountLV(lvname, vgname, directory string) (string, error) {
 	lvPath := fmt.Sprintf("/dev/%s/%s", vgname, lvname)
 	mountPath := path.Join(directory, lvname)
 
-	cmd := exec.Command("umount", lvPath)
+	cmd := exec.Command("umount", "--lazy", "--force", lvPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(out), fmt.Errorf("unable to umount %s from %s err:%v", lvPath, mountPath, err)
+		klog.Errorf("unable to umount %s from %s output:%s err:%v", lvPath, string(out), mountPath, err)
 	}
 	return "", nil
 }

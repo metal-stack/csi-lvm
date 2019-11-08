@@ -18,7 +18,7 @@ import (
 const (
 	// mountPoint specifies where the csi-lvm subdirectory is created where the pv´s get mounted into
 	// this must match with the volume mounted into the csi-lvm-provisioner pod.
-	mountPoint = "/data"
+	mountPoint = "/data/csi-lvm"
 )
 
 var (
