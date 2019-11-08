@@ -16,5 +16,5 @@ jobs:
      run: |
        export GITHUB_TAG_NAME=${GITHUB_REF##*/}
        docker login -u metalpod -p ${{ secrets.DOCKER_HUB_TOKEN }}
-       make dockerimage
+       make dockerimages
        make dockerpush
