@@ -45,3 +45,20 @@ spec:
   resources:
     requests:
       storage: 10Mi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lvm-pvc-block
+  namespace: default
+  annotations:
+    csi-lvm.metal-pod.io/type: "linear"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Block
+  storageClassName: csi-lvm
+  resources:
+    requests:
+      storage: 10Mi

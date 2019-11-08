@@ -49,6 +49,10 @@ func createLVCmd() cli.Command {
 				Name:  flagDevicesPattern,
 				Usage: "Required. the patterns of the physical volumes to use.",
 			},
+			cli.BoolFlag{
+				Name:  flagBlockMode,
+				Usage: "Optional. create a block device only, default false",
+			},
 		},
 		Action: func(c *cli.Context) {
 			if err := createLV(c); err != nil {
@@ -83,8 +87,9 @@ func createLV(c *cli.Context) error {
 	if lvmType == "" {
 		return fmt.Errorf("invalid empty flag %v", flagLVMType)
 	}
+	blockMode := c.Bool(flagBlockMode)
 
-	log.Printf("create lv %s size:%d vg:%s devicespattern:%s dir:%s type:%s", lvName, lvSize, vgName, devicesPattern, dirName, lvmType)
+	log.Printf("create lv %s size:%d vg:%s devicespattern:%s dir:%s type:%s block:%t", lvName, lvSize, vgName, devicesPattern, dirName, lvmType, blockMode)
 
 	output, err := createVG(vgName, devicesPattern)
 	if err != nil {
@@ -96,12 +101,16 @@ func createLV(c *cli.Context) error {
 		return fmt.Errorf("unable to create lv: %v output:%s", err, output)
 	}
 
-	output, err = mountLV(lvName, vgName, dirName)
-	if err != nil {
-		return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
+	if !blockMode {
+		output, err = mountLV(lvName, vgName, dirName)
+		if err != nil {
+			return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
+		}
+		log.Printf("mounted lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
+	} else {
+		log.Printf("block lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	}
 
-	log.Printf("lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	return nil
 }
 

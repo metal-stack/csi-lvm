@@ -63,6 +63,14 @@ type volumeAction struct {
 	nodeName string
 	size     int64
 	lvmType  string
+	isBlock  bool
+}
+
+// SupportsBlock returns whether provisioner supports block volume.
+// this is required for mixed setups where pv´s mounted in pods
+// and block devices must be possible on the same node
+func (p *lvmProvisioner) SupportsBlock() bool {
+	return true
 }
 
 // Provision creates a storage asset and returns a PV object representing it.
@@ -99,6 +107,13 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		return nil, fmt.Errorf("configuration error, no volume size not readable")
 	}
 
+	volumeMode := v1.PersistentVolumeFilesystem
+	isBlock := false
+	if options.PVC.Spec.VolumeMode != nil && *options.PVC.Spec.VolumeMode == v1.PersistentVolumeBlock {
+		isBlock = true
+		volumeMode = v1.PersistentVolumeBlock
+	}
+
 	va := volumeAction{
 		action:   actionTypeCreate,
 		name:     name,
@@ -106,6 +121,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		nodeName: node.Name,
 		size:     size,
 		lvmType:  lvmType,
+		isBlock:  isBlock,
 	}
 	if err := p.createProvisionerPod(va); err != nil {
 		klog.Errorf("error creating provisioner pod :%v", err)
@@ -130,6 +146,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 					Path: path,
 				},
 			},
+			VolumeMode: &volumeMode,
 			NodeAffinity: &v1.VolumeNodeAffinity{
 				Required: &v1.NodeSelector{
 					NodeSelectorTerms: []v1.NodeSelectorTerm{
@@ -161,6 +178,11 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 		return err
 	}
 	if volume.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimRetain {
+		isBlock := false
+		if volume.Spec.VolumeMode != nil && *volume.Spec.VolumeMode == v1.PersistentVolumeBlock {
+			isBlock = true
+		}
+
 		klog.Infof("Deleting volume %v at %v:%v", volume.Name, node, path)
 		va := volumeAction{
 			action:   actionTypeDelete,
@@ -168,6 +190,7 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 			path:     path,
 			nodeName: node,
 			size:     0,
+			isBlock:  isBlock,
 		}
 		if err := p.createProvisionerPod(va); err != nil {
 			klog.Infof("clean up volume %v failed: %v", volume.Name, err)
@@ -192,6 +215,9 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 		args = append(args, "deletelv")
 	}
 	args = append(args, "--lvname", va.name, "--vgname", "csi-lvm", "--directory", p.lvDir)
+	if va.isBlock {
+		args = append(args, "--block")
+	}
 
 	klog.Infof("start provisionerPod with args:%s", args)
 	hostPathType := v1.HostPathDirectoryOrCreate

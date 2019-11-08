@@ -27,6 +27,10 @@ func deleteLVCmd() cli.Command {
 				Name:  flagDirectory,
 				Usage: "Required. the name of the directory to mount the lv",
 			},
+			cli.BoolFlag{
+				Name:  flagBlockMode,
+				Usage: "Optional. treat as block device default false",
+			},
 		},
 		Action: func(c *cli.Context) {
 			if err := deleteLV(c); err != nil {
@@ -49,14 +53,18 @@ func deleteLV(c *cli.Context) error {
 	if dirName == "" {
 		return fmt.Errorf("invalid empty flag %v", flagDirectory)
 	}
-	log.Printf("delete lv %s vg:%s dir:%s", lvName, vgName, dirName)
+	blockMode := c.Bool(flagBlockMode)
 
-	output, err := umountLV(lvName, vgName, dirName)
-	if err != nil {
-		return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
+	log.Printf("delete lv %s vg:%s dir:%s block:%t", lvName, vgName, dirName, blockMode)
+
+	if !blockMode {
+		output, err := umountLV(lvName, vgName, dirName)
+		if err != nil {
+			return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
+		}
 	}
 
-	output, err = commands.RemoveLV(context.Background(), vgName, lvName)
+	output, err := commands.RemoveLV(context.Background(), vgName, lvName)
 	if err != nil {
 		return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
 	}
