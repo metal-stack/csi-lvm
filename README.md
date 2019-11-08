@@ -176,7 +176,8 @@ spec:
 
 ### Definition
 
-`CSI_LVM_DEVICE_PATTERN` is a grok pattern to specify which block devices to use for lvm devices on the node. This can be for example `/dev/sd[bcde]` if you want to use only /dev/sdb - /dev/sde. IMPORTANT: no wildcard (*) allowed actually.
+`CSI_LVM_DEVICE_PATTERN` is a grok pattern to specify which block devices to use for lvm devices on the node. This can be for example `/dev/sd[bcde]` if you want to use only /dev/sdb - /dev/sde.
+***IMPORTANT***: no wildcard (*) allowed currently.
 
 ### PVC Striped, Mirrored
 
