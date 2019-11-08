@@ -237,7 +237,7 @@ spec:
 
 ## Uninstall
 
-Before uninstallation, make sure the PVs created by the provisioner have already been deleted. Use `kubectl get pv` and make sure no PV with StorageClass `csi-lvm`.
+Before un-installation, make sure the PVs created by the provisioner have already been deleted. Use `kubectl get pv` and make sure no PV with StorageClass `csi-lvm`.
 
 To uninstall, execute:
 
