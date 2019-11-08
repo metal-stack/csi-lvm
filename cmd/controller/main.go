@@ -15,6 +15,12 @@ import (
 	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
+const (
+	// mountPoint specifies where the csi-lvm subdirectory is created where the pv´s get mounted into
+	// this must match with the volume mounted into the csi-lvm-provisioner pod.
+	mountPoint = "/data"
+)
+
 var (
 	flagProvisionerName     = "provisioner-name"
 	envProvisionerName      = "PROVISIONER_NAME"
@@ -132,7 +138,7 @@ func startDaemon(c *cli.Context) error {
 		return fmt.Errorf("invalid empty flag %v", flagDefaultLVMType)
 	}
 
-	provisioner := NewLVMProvisioner(kubeClient, namespace, "/data", devicePattern, provisionerImage, defaultLVMType)
+	provisioner := NewLVMProvisioner(kubeClient, namespace, mountPoint, devicePattern, provisionerImage, defaultLVMType)
 	if err != nil {
 		return err
 	}
