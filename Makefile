@@ -1,6 +1,7 @@
 GO111MODULE := on
 DOCKER_TAG := $(or ${GITHUB_TAG_NAME}, latest)
 
+all: provisioner controller
 
 .PHONY: provisioner
 provisioner:
