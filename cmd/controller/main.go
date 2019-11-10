@@ -15,12 +15,6 @@ import (
 	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
-const (
-	// mountPoint specifies where the csi-lvm subdirectory is created where the pv´s get mounted into
-	// this must match with the volume mounted into the csi-lvm-provisioner pod.
-	mountPoint = "/data/csi-lvm"
-)
-
 var (
 	flagProvisionerName     = "provisioner-name"
 	envProvisionerName      = "PROVISIONER_NAME"
@@ -35,6 +29,8 @@ var (
 	envDevicePattern        = "CSI_LVM_DEVICE_PATTERN"
 	flagDefaultLVMType      = "default-lvm-type"
 	envDefaultLVMType       = "CSI_LVM_DEFAULT_LVM_TYPE"
+	flagMountPoint          = "mountpoint"
+	envMountPoint           = "CSI_LVM_MOUNTPOINT"
 )
 
 func cmdNotFound(c *cli.Context, command string) {
@@ -88,6 +84,12 @@ func startCmd() cli.Command {
 				EnvVar: envDefaultLVMType,
 				Value:  mirrorType,
 			},
+			cli.StringFlag{
+				Name:   flagMountPoint,
+				Usage:  "Optional. the mountpoint on the node where the volumes get mounted",
+				EnvVar: envMountPoint,
+				Value:  "/tmp/csi-lvm",
+			},
 		},
 		Action: func(c *cli.Context) {
 			if err := startDaemon(c); err != nil {
@@ -136,6 +138,10 @@ func startDaemon(c *cli.Context) error {
 	defaultLVMType := c.String(flagDefaultLVMType)
 	if defaultLVMType == "" {
 		return fmt.Errorf("invalid empty flag %v", flagDefaultLVMType)
+	}
+	mountPoint := c.String(flagMountPoint)
+	if mountPoint == "" {
+		return fmt.Errorf("invalid empty flag %v", flagMountPoint)
 	}
 
 	provisioner := NewLVMProvisioner(kubeClient, namespace, mountPoint, devicePattern, provisionerImage, defaultLVMType)
