@@ -169,6 +169,10 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 			return string(out), fmt.Errorf("unable to mount %s to %s err:%v output:%s", lvPath, mountPath, err, out)
 		}
 	}
+	err = os.Chmod(mountPath, 0777)
+	if err != nil {
+		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%v", mountPath, err)
+	}
 	log.Printf("mountlv output:%s", out)
 	return "", nil
 }
