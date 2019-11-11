@@ -18,8 +18,6 @@ minikube ssh 'for i in 0 1; do  dd if=/dev/zero of=loop${i} bs=1M count=500 ; su
 eval $(minikube docker-env)
 ```
 
-- modify controller.go to pull images only if not present
-
 - build docker images of controller and provisioner
 
 ```bash

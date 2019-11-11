@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path"
+	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -23,6 +24,8 @@ const (
 	mirrorType       = "mirror"
 	actionTypeCreate = "create"
 	actionTypeDelete = "delete"
+	pullAlways       = "always"
+	pullIfNotPresent = "ifnotpresent"
 )
 
 type actionType string
@@ -38,10 +41,16 @@ type lvmProvisioner struct {
 	namespace        string
 	// defaultLVMType the lvm type to use by default if not overwritten in the pvc spec.
 	defaultLVMType string
+	pullPolicy     v1.PullPolicy
 }
 
 // NewLVMProvisioner creates a new hostpath provisioner
-func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage, defaultLVMType string) controller.Provisioner {
+func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage, defaultLVMType, pullPolicy string) controller.Provisioner {
+	pp := v1.PullAlways
+	if strings.ToLower(pullPolicy) == pullIfNotPresent {
+		pp = v1.PullIfNotPresent
+	}
+
 	return &lvmProvisioner{
 		lvDir:            lvDir,
 		devicePattern:    devicePattern,
@@ -49,6 +58,7 @@ func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, deviceP
 		kubeClient:       kubeClient,
 		namespace:        namespace,
 		defaultLVMType:   defaultLVMType,
+		pullPolicy:       pp,
 	}
 }
 
@@ -260,7 +270,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 							MountPath: "/lib/modules",
 						},
 					},
-					ImagePullPolicy: v1.PullIfNotPresent,
+					ImagePullPolicy: p.pullPolicy,
 					SecurityContext: &v1.SecurityContext{
 						Privileged: &privileged,
 					},

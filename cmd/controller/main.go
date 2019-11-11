@@ -16,21 +16,23 @@ import (
 )
 
 var (
-	flagProvisionerName     = "provisioner-name"
-	envProvisionerName      = "PROVISIONER_NAME"
-	defaultProvisionerName  = "metal-pod.io/csi-lvm"
-	flagNamespace           = "namespace"
-	envNamespace            = "CSI_LVM_PROVISIONER_NAMESPACE"
-	defaultNamespace        = "csi-lvm"
-	flagProvisionerImage    = "provisioner-image"
-	envProvisionerImage     = "CSI_LVM_PROVISIONER_IMAGE"
-	defaultProvisionerImage = "metalpod/csi-lvm-provisioner"
-	flagDevicePattern       = "device-pattern"
-	envDevicePattern        = "CSI_LVM_DEVICE_PATTERN"
-	flagDefaultLVMType      = "default-lvm-type"
-	envDefaultLVMType       = "CSI_LVM_DEFAULT_LVM_TYPE"
-	flagMountPoint          = "mountpoint"
-	envMountPoint           = "CSI_LVM_MOUNTPOINT"
+	flagProvisionerName          = "provisioner-name"
+	envProvisionerName           = "PROVISIONER_NAME"
+	defaultProvisionerName       = "metal-pod.io/csi-lvm"
+	flagNamespace                = "namespace"
+	envNamespace                 = "CSI_LVM_PROVISIONER_NAMESPACE"
+	defaultNamespace             = "csi-lvm"
+	flagProvisionerImage         = "provisioner-image"
+	envProvisionerImage          = "CSI_LVM_PROVISIONER_IMAGE"
+	defaultProvisionerImage      = "metalpod/csi-lvm-provisioner"
+	flagDevicePattern            = "device-pattern"
+	envDevicePattern             = "CSI_LVM_DEVICE_PATTERN"
+	flagDefaultLVMType           = "default-lvm-type"
+	envDefaultLVMType            = "CSI_LVM_DEFAULT_LVM_TYPE"
+	flagMountPoint               = "mountpoint"
+	envMountPoint                = "CSI_LVM_MOUNTPOINT"
+	flagProvisionerPodPullPolicy = "pull-policy"
+	envProvisionerPodPullPolicy  = "CSI_LVM_PULL_POLICY"
 )
 
 func cmdNotFound(c *cli.Context, command string) {
@@ -90,6 +92,12 @@ func startCmd() cli.Command {
 				EnvVar: envMountPoint,
 				Value:  "/tmp/csi-lvm",
 			},
+			cli.StringFlag{
+				Name:   flagProvisionerPodPullPolicy,
+				Usage:  "Optional. the pull policy for the provisioner pod, can be always|ifnotpresent",
+				EnvVar: envProvisionerPodPullPolicy,
+				Value:  pullAlways,
+			},
 		},
 		Action: func(c *cli.Context) {
 			if err := startDaemon(c); err != nil {
@@ -143,8 +151,12 @@ func startDaemon(c *cli.Context) error {
 	if mountPoint == "" {
 		return fmt.Errorf("invalid empty flag %v", flagMountPoint)
 	}
+	pullPolicy := c.String(flagProvisionerPodPullPolicy)
+	if pullPolicy == "" {
+		return fmt.Errorf("invalid empty flag %v", flagProvisionerPodPullPolicy)
+	}
 
-	provisioner := NewLVMProvisioner(kubeClient, namespace, mountPoint, devicePattern, provisionerImage, defaultLVMType)
+	provisioner := NewLVMProvisioner(kubeClient, namespace, mountPoint, devicePattern, provisionerImage, defaultLVMType, pullPolicy)
 	if err != nil {
 		return err
 	}
