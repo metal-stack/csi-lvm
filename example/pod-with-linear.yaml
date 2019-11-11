@@ -12,10 +12,6 @@ spec:
     volumeMounts:
     - name: linear
       mountPath: /linear
-    - name: mirror
-      mountPath: /mirror
-    - name: striped
-      mountPath: /striped
     ports:
     - containerPort: 80
     resources:
@@ -26,9 +22,3 @@ spec:
   - name: linear
     persistentVolumeClaim:
       claimName: lvm-pvc-linear
-  - name: mirror
-    persistentVolumeClaim:
-      claimName: lvm-pvc-mirror
-  - name: striped
-    persistentVolumeClaim:
-      claimName: lvm-pvc-striped

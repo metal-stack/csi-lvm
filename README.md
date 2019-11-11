@@ -177,6 +177,7 @@ spec:
 ### Definition
 
 `CSI_LVM_DEVICE_PATTERN` is a grok pattern to specify which block devices to use for lvm devices on the node. This can be for example `/dev/sd[bcde]` if you want to use only /dev/sdb - /dev/sde.
+***IMPORTANT***: no wildcard (*) allowed currently.
 
 ### PVC Striped, Mirrored
 
@@ -237,7 +238,7 @@ spec:
 
 ## Uninstall
 
-Before uninstallation, make sure the PVs created by the provisioner have already been deleted. Use `kubectl get pv` and make sure no PV with StorageClass `csi-lvm`.
+Before un-installation, make sure the PVs created by the provisioner have already been deleted. Use `kubectl get pv` and make sure no PV with StorageClass `csi-lvm`.
 
 To uninstall, execute:
 

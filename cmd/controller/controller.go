@@ -1,10 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"path"
+	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -25,6 +24,8 @@ const (
 	mirrorType       = "mirror"
 	actionTypeCreate = "create"
 	actionTypeDelete = "delete"
+	pullAlways       = "always"
+	pullIfNotPresent = "ifnotpresent"
 )
 
 type actionType string
@@ -40,10 +41,16 @@ type lvmProvisioner struct {
 	namespace        string
 	// defaultLVMType the lvm type to use by default if not overwritten in the pvc spec.
 	defaultLVMType string
+	pullPolicy     v1.PullPolicy
 }
 
 // NewLVMProvisioner creates a new hostpath provisioner
-func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage, defaultLVMType string) controller.Provisioner {
+func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage, defaultLVMType, pullPolicy string) controller.Provisioner {
+	pp := v1.PullAlways
+	if strings.ToLower(pullPolicy) == pullIfNotPresent {
+		pp = v1.PullIfNotPresent
+	}
+
 	return &lvmProvisioner{
 		lvDir:            lvDir,
 		devicePattern:    devicePattern,
@@ -51,6 +58,7 @@ func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, deviceP
 		kubeClient:       kubeClient,
 		namespace:        namespace,
 		defaultLVMType:   defaultLVMType,
+		pullPolicy:       pp,
 	}
 }
 
@@ -63,10 +71,19 @@ type volumeAction struct {
 	nodeName string
 	size     int64
 	lvmType  string
+	isBlock  bool
+}
+
+// SupportsBlock returns whether provisioner supports block volume.
+// this is required for mixed setups where pv´s mounted in pods
+// and block devices must be possible on the same node
+func (p *lvmProvisioner) SupportsBlock() bool {
+	return true
 }
 
 // Provision creates a storage asset and returns a PV object representing it.
 func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.PersistentVolume, error) {
+	klog.Infof("start provision %s node:%s devices:%s", options.PVName, options.SelectedNode.GetName(), p.devicePattern)
 	node := options.SelectedNode
 	if node == nil {
 		return nil, fmt.Errorf("configuration error, no node was specified")
@@ -98,6 +115,13 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		return nil, fmt.Errorf("configuration error, no volume size not readable")
 	}
 
+	volumeMode := v1.PersistentVolumeFilesystem
+	isBlock := false
+	if options.PVC.Spec.VolumeMode != nil && *options.PVC.Spec.VolumeMode == v1.PersistentVolumeBlock {
+		isBlock = true
+		volumeMode = v1.PersistentVolumeBlock
+	}
+
 	va := volumeAction{
 		action:   actionTypeCreate,
 		name:     name,
@@ -105,6 +129,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		nodeName: node.Name,
 		size:     size,
 		lvmType:  lvmType,
+		isBlock:  isBlock,
 	}
 	if err := p.createProvisionerPod(va); err != nil {
 		klog.Errorf("error creating provisioner pod :%v", err)
@@ -129,6 +154,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 					Path: path,
 				},
 			},
+			VolumeMode: &volumeMode,
 			NodeAffinity: &v1.VolumeNodeAffinity{
 				Required: &v1.NodeSelector{
 					NodeSelectorTerms: []v1.NodeSelectorTerm{
@@ -159,14 +185,21 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 	if err != nil {
 		return err
 	}
+	klog.Infof("delete volume: %s on node:%s reclaim:%s", path, node, volume.Spec.PersistentVolumeReclaimPolicy)
 	if volume.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimRetain {
-		klog.Infof("Deleting volume %v at %v:%v", volume.Name, node, path)
+		isBlock := false
+		if volume.Spec.VolumeMode != nil && *volume.Spec.VolumeMode == v1.PersistentVolumeBlock {
+			isBlock = true
+		}
+
+		klog.Infof("deleting volume %v at %v:%v", volume.Name, node, path)
 		va := volumeAction{
 			action:   actionTypeDelete,
 			name:     volume.Name,
 			path:     path,
 			nodeName: node,
 			size:     0,
+			isBlock:  isBlock,
 		}
 		if err := p.createProvisionerPod(va); err != nil {
 			klog.Infof("clean up volume %v failed: %v", volume.Name, err)
@@ -179,8 +212,11 @@ func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
 }
 
 func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
-	if va.name == "" || va.path == "" || va.nodeName == "" || va.lvmType == "" {
-		return fmt.Errorf("invalid empty name or path or node or lvm type")
+	if va.name == "" || va.path == "" || va.nodeName == "" {
+		return fmt.Errorf("invalid empty name or path or node")
+	}
+	if va.action == actionTypeCreate && va.lvmType == "" {
+		return fmt.Errorf("createlv without lvm type")
 	}
 
 	args := []string{}
@@ -191,6 +227,9 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 		args = append(args, "deletelv")
 	}
 	args = append(args, "--lvname", va.name, "--vgname", "csi-lvm", "--directory", p.lvDir)
+	if va.isBlock {
+		args = append(args, "--block")
+	}
 
 	klog.Infof("start provisionerPod with args:%s", args)
 	hostPathType := v1.HostPathDirectoryOrCreate
@@ -217,7 +256,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 						{
 							Name:             "data",
 							ReadOnly:         false,
-							MountPath:        "/data",
+							MountPath:        p.lvDir,
 							MountPropagation: &mountPropagation,
 						},
 						{
@@ -231,8 +270,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 							MountPath: "/lib/modules",
 						},
 					},
-					// FIXME set to always
-					ImagePullPolicy: v1.PullIfNotPresent,
+					ImagePullPolicy: p.pullPolicy,
 					SecurityContext: &v1.SecurityContext{
 						Privileged: &privileged,
 					},
@@ -295,41 +333,25 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	}()
 
 	completed := false
-	for i := 0; i < 20; i++ {
-		if pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(provisionerPod.Name, metav1.GetOptions{}); err != nil {
-			logs := getPodLogs(p.kubeClient, pod)
-			klog.Errorf("provisioner pod logs: %s", logs)
-			return err
+	retrySeconds := 20
+	for i := 0; i < retrySeconds; i++ {
+		pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(provisionerPod.Name, metav1.GetOptions{})
+		if err != nil {
+			klog.Errorf("error reading provisioner pod:%v", err)
 		} else if pod.Status.Phase == v1.PodSucceeded {
+			klog.Info("provisioner pod terminated successfully")
 			completed = true
 			break
 		}
+		klog.Infof("provisioner pod status:%s", pod.Status.Phase)
 		time.Sleep(1 * time.Second)
 	}
 	if !completed {
-		return fmt.Errorf("create process timeout after %v seconds", 20)
+		return fmt.Errorf("create process timeout after %v seconds", retrySeconds)
 	}
 
 	klog.Infof("Volume %v has been %vd on %v:%v", va.name, va.action, va.nodeName, va.path)
 	return nil
-}
-
-func getPodLogs(kubeClient clientset.Interface, pod *v1.Pod) string {
-	podLogOpts := v1.PodLogOptions{}
-	req := kubeClient.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
-	podLogs, err := req.Stream()
-	if err != nil {
-		return "error in opening stream"
-	}
-	defer podLogs.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, podLogs)
-	if err != nil {
-		return "error in copy information from podLogs to buf"
-	}
-	str := buf.String()
-	return str
 }
 
 func (p *lvmProvisioner) getPathAndNodeForPV(pv *v1.PersistentVolume) (path, node string, err error) {
