@@ -28,7 +28,7 @@ make dockerimages
 
 ```bash
 k apply -f deploy/controller.yaml
-stern -n csi-lvm csi &
+stern -n csi-lvm ".*" &
 ```
 
 - deploy the pvc´s
