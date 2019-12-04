@@ -181,11 +181,12 @@ spec:
 
 ### PVC Striped, Mirrored
 
-By default the LV´s are created in *linear* mode on the devices specified by the grok pattern, beginning on the first found device. If this is full, the next LV will be created on the next device and so forth.
+By default the LV´s are created in `linear` mode on the devices specified by the grok pattern, beginning on the first found device. If this is full, the next LV will be created on the next device and so forth.
 
-If *mirrored* is set, all block will be mirrored with one additional copy to a additional disk found if more than one disk is present.
+If more than 1 device was found with the given pattern, two more options for the created lvs are available:
 
-If *striped* is set, the pvc will be a stripe across all found block devices specified by the above grok pattern. That means that all blocks written are spread across 4 devices in chunks. This gives ~4 times the read/write performance for the volume, but also a 4 times higher risk of data loss in case a single disk fails. If you do not want higher performance but more safety, you can disable that with:
+* `mirror`: all block will be mirrored with one additional copy to a additional disk found if more than one disk is present.
+* `striped`: the pvc will be a stripe across all found block devices specified by the above grok pattern. If for example 4 disk where found, all blocks written are spread across 4 devices in chunks. This gives ~4 times the read/write performance for the volume, but also a 4 times higher risk of data loss in case a single disk fails.
 
 ```yaml
 apiVersion: v1
