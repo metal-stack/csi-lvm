@@ -241,16 +241,16 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 	if err != nil {
 		return "", fmt.Errorf("unable to determine pv count of vg: %v", err)
 	}
+
+	if pvs < 2 {
+		log.Println("pvcount is <2 only linear is supported")
+		lvmType = linearType
+	}
+
 	switch lvmType {
 	case stripedType:
-		if pvs < 2 {
-			return "", fmt.Errorf("cannot use type %s when pv count is smaller than 2", lvmType)
-		}
 		args = append(args, "--type", "striped", "--stripes", fmt.Sprintf("%d", pvs))
 	case mirrorType:
-		if pvs < 2 {
-			return "", fmt.Errorf("cannot use type %s when pv count is smaller than 2", lvmType)
-		}
 		args = append(args, "--type", "raid1", "--mirrors", "1", "--nosync")
 	case linearType:
 	default:
