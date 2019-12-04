@@ -9,7 +9,7 @@ minikube start --memory 4g
 - create 2 loop devices for csi-lvm usage
 
 ```bash
-minikube ssh 'for i in 0 1; do  dd if=/dev/zero of=loop${i} bs=1M count=500 ; sudo losetup -f loop${i}; sudo losetup -a ; done'
+minikube ssh 'for i in 0 1; do fallocate -l 1G loop${i} ; sudo losetup -f loop${i}; sudo losetup -a ; done'
 ```
 
 - set docker environment to point to minikube
