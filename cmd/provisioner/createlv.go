@@ -177,7 +177,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 	return "", nil
 }
 
-func createVG(name string, devicesPattern []string) (string, error) {
+func vgExists(name string) bool {
 	vgs, err := commands.ListVG(context.Background())
 	if err != nil {
 		log.Printf("unable to list existing volumegroups:%v", err)
@@ -190,10 +190,34 @@ func createVG(name string, devicesPattern []string) (string, error) {
 			break
 		}
 	}
+	return vgexists
+}
+
+func createVG(name string, devicesPattern []string) (string, error) {
+	vgexists := vgExists(name)
 	if vgexists {
 		log.Printf("volumegroup: %s already exists\n", name)
 		return name, nil
+	} else {
+		// scan for vgs and activate if any
+		cmd := exec.Command("vgscan")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("unable to scan for volumegroups:%s %v", out, err)
+		}
+		cmd = exec.Command("vgchange", "-ay")
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("unable to activate volumegroups:%s %v", out, err)
+		}
+		// now check again for existing vg again
+		vgexists = vgExists(name)
+		if vgexists {
+			log.Printf("volumegroup: %s already exists\n", name)
+			return name, nil
+		}
 	}
+
 	physicalVolumes, err := devices(devicesPattern)
 	if err != nil {
 		return "", fmt.Errorf("unable to lookup devices from devicesPattern %s, err:%v", devicesPattern, err)
