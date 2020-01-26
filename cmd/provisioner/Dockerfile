@@ -4,7 +4,7 @@ COPY / /work
 WORKDIR /work
 RUN make provisioner
 
-FROM alpine:3.10
+FROM alpine:3.11
 RUN apk add lvm2 e2fsprogs util-linux
 COPY --from=builder /work/bin/csi-lvm-provisioner /csi-lvm-provisioner
 USER root
