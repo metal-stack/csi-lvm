@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/google/lvmd/commands"
 	"github.com/urfave/cli"
+	"k8s.io/klog"
 )
 
 const (
@@ -56,7 +56,7 @@ func createLVCmd() cli.Command {
 		},
 		Action: func(c *cli.Context) {
 			if err := createLV(c); err != nil {
-				log.Fatalf("Error creating lv: %v", err)
+				klog.Fatalf("Error creating lv: %v", err)
 			}
 		},
 	}
@@ -89,7 +89,7 @@ func createLV(c *cli.Context) error {
 	}
 	blockMode := c.Bool(flagBlockMode)
 
-	log.Printf("create lv %s size:%d vg:%s devicespattern:%s dir:%s type:%s block:%t", lvName, lvSize, vgName, devicesPattern, dirName, lvmType, blockMode)
+	klog.Infof("create lv %s size:%d vg:%s devicespattern:%s dir:%s type:%s block:%t", lvName, lvSize, vgName, devicesPattern, dirName, lvmType, blockMode)
 
 	output, err := createVG(vgName, devicesPattern)
 	if err != nil {
@@ -106,13 +106,13 @@ func createLV(c *cli.Context) error {
 		if err != nil {
 			return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
 		}
-		log.Printf("mounted lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
+		klog.Infof("mounted lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	} else {
 		output, err = bindMountLV(lvName, vgName, dirName)
 		if err != nil {
-			return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
+			return fmt.Errorf("unable to bind mount lv: %v output:%s", err, output)
 		}
-		log.Printf("block lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
+		klog.Infof("block lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	}
 
 	return nil
@@ -120,12 +120,12 @@ func createLV(c *cli.Context) error {
 
 func devices(devicesPattern []string) (devices []string, err error) {
 	for _, devicePattern := range devicesPattern {
-		log.Printf("search devices :%s ", devicePattern)
+		klog.Infof("search devices :%s ", devicePattern)
 		matches, err := filepath.Glob(devicePattern)
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("found: %s", matches)
+		klog.Infof("found: %s", matches)
 		devices = append(devices, matches...)
 	}
 	return devices, nil
@@ -141,7 +141,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 	cmd := exec.Command("blkid", lvPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("unable to check if %s is already formatted:%v", lvPath, err)
+		klog.Infof("unable to check if %s is already formatted:%v", lvPath, err)
 	}
 	if strings.Contains(string(out), "ext4") {
 		formatted = true
@@ -149,7 +149,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 
 	mountPath := path.Join(directory, lvname)
 	if !formatted {
-		log.Printf("formatting with mkfs.ext4 %s", lvPath)
+		klog.Infof("formatting with mkfs.ext4 %s", lvPath)
 		cmd = exec.Command("mkfs.ext4", lvPath)
 		out, err = cmd.CombinedOutput()
 		if err != nil {
@@ -164,7 +164,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 
 	// --make-shared is required that this mount is visible outside this container.
 	mountArgs := []string{"--make-shared", "-t", "ext4", lvPath, mountPath}
-	log.Printf("mountlv command: mount %s", mountArgs)
+	klog.Infof("mountlv command: mount %s", mountArgs)
 	cmd = exec.Command("mount", mountArgs...)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
@@ -177,7 +177,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%v", mountPath, err)
 	}
-	log.Printf("mountlv output:%s", out)
+	klog.Infof("mountlv output:%s", out)
 	return "", nil
 }
 
@@ -192,7 +192,7 @@ func bindMountLV(lvname, vgname, directory string) (string, error) {
 	// --make-shared is required that this mount is visible outside this container.
 	// --bind is required for raw block volumes to make them visible inside the pod.
 	mountArgs := []string{"--make-shared", "--bind", lvPath, mountPath}
-	log.Printf("bindmountlv command: mount %s", mountArgs)
+	klog.Infof("bindmountlv command: mount %s", mountArgs)
 	cmd := exec.Command("mount", mountArgs...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -205,18 +205,18 @@ func bindMountLV(lvname, vgname, directory string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%v", mountPath, err)
 	}
-	log.Printf("bindmountlv output:%s", out)
+	klog.Infof("bindmountlv output:%s", out)
 	return "", nil
 }
 
 func vgExists(name string) bool {
 	vgs, err := commands.ListVG(context.Background())
 	if err != nil {
-		log.Printf("unable to list existing volumegroups:%v", err)
+		klog.Infof("unable to list existing volumegroups:%v", err)
 	}
 	vgexists := false
 	for _, vg := range vgs {
-		log.Printf("compare vg:%s with:%s\n", vg.Name, name)
+		klog.Infof("compare vg:%s with:%s\n", vg.Name, name)
 		if vg.Name == name {
 			vgexists = true
 			break
@@ -228,24 +228,24 @@ func vgExists(name string) bool {
 func createVG(name string, devicesPattern []string) (string, error) {
 	vgexists := vgExists(name)
 	if vgexists {
-		log.Printf("volumegroup: %s already exists\n", name)
+		klog.Infof("volumegroup: %s already exists\n", name)
 		return name, nil
 	} else {
 		// scan for vgs and activate if any
 		cmd := exec.Command("vgscan")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Printf("unable to scan for volumegroups:%s %v", out, err)
+			klog.Infof("unable to scan for volumegroups:%s %v", out, err)
 		}
 		cmd = exec.Command("vgchange", "-ay")
 		_, err = cmd.CombinedOutput()
 		if err != nil {
-			log.Printf("unable to activate volumegroups:%s %v", out, err)
+			klog.Infof("unable to activate volumegroups:%s %v", out, err)
 		}
 		// now check again for existing vg again
 		vgexists = vgExists(name)
 		if vgexists {
-			log.Printf("volumegroup: %s already exists\n", name)
+			klog.Infof("volumegroup: %s already exists\n", name)
 			return name, nil
 		}
 	}
@@ -261,7 +261,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 	for _, tag := range tags {
 		args = append(args, "--add-tag", tag)
 	}
-	log.Printf("create vg with command: vgcreate %v", args)
+	klog.Infof("create vg with command: vgcreate %v", args)
 	cmd := exec.Command("vgcreate", args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
@@ -271,11 +271,11 @@ func createVG(name string, devicesPattern []string) (string, error) {
 func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string) (string, error) {
 	lvs, err := commands.ListLV(context.Background(), vg+"/"+name)
 	if err != nil {
-		log.Printf("unable to list existing logicalvolumes:%v", err)
+		klog.Infof("unable to list existing logicalvolumes:%v", err)
 	}
 	lvExists := false
 	for _, lv := range lvs {
-		log.Printf("compare lv:%s with:%s\n", lv.Name, name)
+		klog.Infof("compare lv:%s with:%s\n", lv.Name, name)
 		if strings.Contains(lv.Name, name) {
 			lvExists = true
 			break
@@ -283,7 +283,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 	}
 
 	if lvExists {
-		log.Printf("logicalvolume: %s already exists\n", name)
+		klog.Infof("logicalvolume: %s already exists\n", name)
 		return name, nil
 	}
 
@@ -299,7 +299,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 	}
 
 	if pvs < 2 {
-		log.Println("pvcount is <2 only linear is supported")
+		klog.Warning("pvcount is <2 only linear is supported")
 		lvmType = linearType
 	}
 
@@ -318,7 +318,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 		args = append(args, "--add-tag", tag)
 	}
 	args = append(args, vg)
-	log.Printf("lvreate %s", args)
+	klog.Infof("lvreate %s", args)
 	cmd := exec.Command("lvcreate", args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err

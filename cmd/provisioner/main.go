@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/urfave/cli"
+	"k8s.io/klog"
 )
 
 const (
@@ -36,9 +36,9 @@ func main() {
 	p.CommandNotFound = cmdNotFound
 	p.OnUsageError = onUsageError
 
-	log.Println("starting csi-lvm-provisioner")
+	klog.Infof("starting csi-lvm-provisioner")
 
 	if err := p.Run(os.Args); err != nil {
-		log.Fatalf("Critical error: %v", err)
+		klog.Fatalf("Critical error: %v", err)
 	}
 }

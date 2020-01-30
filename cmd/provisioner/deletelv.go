@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -36,7 +35,7 @@ func deleteLVCmd() cli.Command {
 		},
 		Action: func(c *cli.Context) {
 			if err := deleteLV(c); err != nil {
-				log.Fatalf("Error deleting lv: %v", err)
+				klog.Fatalf("Error deleting lv: %v", err)
 			}
 		},
 	}
@@ -57,7 +56,7 @@ func deleteLV(c *cli.Context) error {
 	}
 	blockMode := c.Bool(flagBlockMode)
 
-	log.Printf("delete lv %s vg:%s dir:%s block:%t", lvName, vgName, dirName, blockMode)
+	klog.Infof("delete lv %s vg:%s dir:%s block:%t", lvName, vgName, dirName, blockMode)
 
 	if !blockMode {
 		output, err := umountLV(lvName, vgName, dirName)
@@ -70,7 +69,7 @@ func deleteLV(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
 	}
-	log.Printf("lv %s vg:%s deleted", lvName, vgName)
+	klog.Infof("lv %s vg:%s deleted", lvName, vgName)
 	return nil
 }
 
