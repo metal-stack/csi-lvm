@@ -58,14 +58,12 @@ func deleteLV(c *cli.Context) error {
 
 	klog.Infof("delete lv %s vg:%s dir:%s block:%t", lvName, vgName, dirName, blockMode)
 
-	if !blockMode {
-		output, err := umountLV(lvName, vgName, dirName)
-		if err != nil {
-			return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
-		}
+	output, err := umountLV(lvName, vgName, dirName)
+	if err != nil {
+		return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
 	}
 
-	output, err := commands.RemoveLV(context.Background(), vgName, lvName)
+	output, err = commands.RemoveLV(context.Background(), vgName, lvName)
 	if err != nil {
 		return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
 	}
