@@ -184,7 +184,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 func bindMountLV(lvname, vgname, directory string) (string, error) {
 	lvPath := fmt.Sprintf("/dev/%s/%s", vgname, lvname)
 	mountPath := path.Join(directory, lvname)
-	err := os.MkdirAll(mountPath, 0777)
+	_, err := os.Create(mountPath)
 	if err != nil {
 		return "", fmt.Errorf("unable to create mount directory for lv:%s err:%v", lvname, err)
 	}
