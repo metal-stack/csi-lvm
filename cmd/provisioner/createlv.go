@@ -108,6 +108,10 @@ func createLV(c *cli.Context) error {
 		}
 		log.Printf("mounted lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	} else {
+		output, err = bindMountLV(lvName, vgName, dirName)
+		if err != nil {
+			return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
+		}
 		log.Printf("block lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	}
 
@@ -174,6 +178,34 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%v", mountPath, err)
 	}
 	log.Printf("mountlv output:%s", out)
+	return "", nil
+}
+
+func bindMountLV(lvname, vgname, directory string) (string, error) {
+	lvPath := fmt.Sprintf("/dev/%s/%s", vgname, lvname)
+	mountPath := path.Join(directory, lvname)
+	err := os.MkdirAll(mountPath, 0777)
+	if err != nil {
+		return "", fmt.Errorf("unable to create mount directory for lv:%s err:%v", lvname, err)
+	}
+
+	// --make-shared is required that this mount is visible outside this container.
+	// --bind is required for raw block volumes to make them visible inside the pod.
+	mountArgs := []string{"--make-shared", "--bind", lvPath, mountPath}
+	log.Printf("bindmountlv command: mount %s", mountArgs)
+	cmd := exec.Command("mount", mountArgs...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		mountOutput := string(out)
+		if !strings.Contains(mountOutput, "already mounted") {
+			return string(out), fmt.Errorf("unable to mount %s to %s err:%v output:%s", lvPath, mountPath, err, out)
+		}
+	}
+	err = os.Chmod(mountPath, 0777)
+	if err != nil {
+		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%v", mountPath, err)
+	}
+	log.Printf("bindmountlv output:%s", out)
 	return "", nil
 }
 
