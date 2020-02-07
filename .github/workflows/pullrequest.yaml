@@ -15,6 +15,6 @@ jobs:
    - name: Build the Docker images
      run: |
        export GITHUB_TAG_NAME=${GITHUB_REF##*/}
-       docker login -u metalpod -p ${{ secrets.DOCKER_HUB_TOKEN }}
+       docker login -u metalstackci -p ${{ secrets.DOCKER_HUB_TOKEN }}
        make dockerimages
        make dockerpush

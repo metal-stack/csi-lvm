@@ -18,7 +18,7 @@ import (
 
 const (
 	keyNode          = "kubernetes.io/hostname"
-	typeAnnotation   = "csi-lvm.metal-pod.io/type"
+	typeAnnotation   = "csi-lvm.metal-stack.io/type"
 	linearType       = "linear"
 	stripedType      = "striped"
 	mirrorType       = "mirror"

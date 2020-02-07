@@ -1,6 +1,6 @@
 # CSI LVM Provisioner
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/metal-pod/csi-lvm)](https://goreportcard.com/report/github.com/metal-pod/csi-lvm)
+[![Go Report Card](https://goreportcard.com/badge/github.com/metal-stack/csi-lvm)](https://goreportcard.com/report/github.com/metal-stack/csi-lvm)
 
 ## Overview
 
@@ -42,7 +42,7 @@ The default grok pattern for disks to use is `/dev/nvme[0-9]n*`, please check if
 If this is set you can install the csi-lvm with:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/deploy/controller.yaml
+kubectl apply -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/deploy/controller.yaml
 ```
 
 After installation, you should see something like the following:
@@ -58,11 +58,11 @@ Check and follow the provisioner log using:
 ```bash
 $ kubectl -n csi-lvm logs -f csi-lvm-controller-d744ccf98-xfcbk
 I1021 14:09:31.108535       1 main.go:132] Provisioner started
-I1021 14:09:31.108830       1 leaderelection.go:235] attempting to acquire leader lease  csi-lvm/metal-pod.io-csi-lvm...
-I1021 14:09:31.121305       1 leaderelection.go:245] successfully acquired lease csi-lvm/metal-pod.io-csi-lvm
-I1021 14:09:31.124339       1 controller.go:770] Starting provisioner controller metal-pod.io/csi-lvm_csi-lvm-controller-7f94749d78-t5nh8_17d2f7ef-1375-4e36-aa71-82e237430881!
-I1021 14:09:31.126248       1 event.go:258] Event(v1.ObjectReference{Kind:"Endpoints", Namespace:"csi-lvm", Name:"metal-pod.io-csi-lvm", UID:"04da008c-36ec-4966-a4f6-c2028e69cdd5", APIVersion:"v1", ResourceVersion:"589", FieldPath:""}): type: 'Normal' reason: 'LeaderElection' csi-lvm-controller-7f94749d78-t5nh8_17d2f7ef-1375-4e36-aa71-82e237430881 became leader
-I1021 14:09:31.225917       1 controller.go:819] Started provisioner controller metal-pod.io/csi-lvm_csi-lvm-controller-7f94749d78-t5nh8_17d2f7ef-1375-4e36-aa71-82e237430881!
+I1021 14:09:31.108830       1 leaderelection.go:235] attempting to acquire leader lease  csi-lvm/metal-stack.io-csi-lvm...
+I1021 14:09:31.121305       1 leaderelection.go:245] successfully acquired lease csi-lvm/metal-stack.io-csi-lvm
+I1021 14:09:31.124339       1 controller.go:770] Starting provisioner controller metal-stack.io/csi-lvm_csi-lvm-controller-7f94749d78-t5nh8_17d2f7ef-1375-4e36-aa71-82e237430881!
+I1021 14:09:31.126248       1 event.go:258] Event(v1.ObjectReference{Kind:"Endpoints", Namespace:"csi-lvm", Name:"metal-stack.io-csi-lvm", UID:"04da008c-36ec-4966-a4f6-c2028e69cdd5", APIVersion:"v1", ResourceVersion:"589", FieldPath:""}): type: 'Normal' reason: 'LeaderElection' csi-lvm-controller-7f94749d78-t5nh8_17d2f7ef-1375-4e36-aa71-82e237430881 became leader
+I1021 14:09:31.225917       1 controller.go:819] Started provisioner controller metal-stack.io/csi-lvm_csi-lvm-controller-7f94749d78-t5nh8_17d2f7ef-1375-4e36-aa71-82e237430881!
 ```
 
 ## Usage
@@ -70,8 +70,8 @@ I1021 14:09:31.225917       1 controller.go:819] Started provisioner controller 
 Create a `hostPath` backed Persistent Volume and a pod uses it:
 
 ```bash
-kubectl create -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/example/pvc.yaml
-kubectl create -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/example/pod.yaml
+kubectl create -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/example/pvc.yaml
+kubectl create -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/example/pod.yaml
 ```
 
 You should see the PV has been created:
@@ -107,13 +107,13 @@ kubectl exec volume-test -- sh -c "echo lvm-test > /data/test"
 Now delete the pod using
 
 ```bash
-kubectl delete -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/example/pod.yaml
+kubectl delete -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/example/pod.yaml
 ```
 
 After confirm that the pod is gone, recreated the pod using
 
 ```bash
-kubectl create -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/example/pod.yaml
+kubectl create -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/example/pod.yaml
 ```
 
 Check the volume content:
@@ -126,8 +126,8 @@ lvm-test
 Delete the pod and pvc
 
 ```bash
-kubectl delete -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/example/pvc.yaml
-kubectl delete -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/example/pod.yaml
+kubectl delete -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/example/pvc.yaml
+kubectl delete -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/example/pod.yaml
 ```
 
 The volume content stored on the node will be automatically cleaned up. You can check the log of `csi-lvm-controller-xxx` for details.
@@ -157,7 +157,7 @@ spec:
       serviceAccountName: csi-lvm-controller
       containers:
       - name: csi-lvm-controller
-        image: metalpod/csi-lvm-controller
+        image: metalstack/csi-lvm-controller
         imagePullPolicy: IfNotPresent
         command:
         - /csi-lvm-controller
@@ -169,7 +169,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: CSI_LVM_PROVISIONER_IMAGE
-          value: "metalpod/csi-lvm-provisioner"
+          value: "metalstack/csi-lvm-provisioner"
         - name: CSI_LVM_DEVICE_PATTERN
           value: "/dev/loop[0,1]"
 ```
@@ -210,7 +210,7 @@ metadata:
   name: lvm-pvc-striped
   namespace: default
   annotations:
-    csi-lvm.metal-pod.io/type: "striped"
+    csi-lvm.metal-stack.io/type: "striped"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -227,7 +227,7 @@ metadata:
   name: lvm-pvc-mirrored
   namespace: default
   annotations:
-    csi-lvm.metal-pod.io/type: "mirror"
+    csi-lvm.metal-stack.io/type: "mirror"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -244,5 +244,5 @@ Before un-installation, make sure the PVs created by the provisioner have alread
 To uninstall, execute:
 
 ```bash
-kubectl delete -f https://raw.githubusercontent.com/metal-pod/csi-lvm/master/deploy/controller.yaml
+kubectl delete -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/deploy/controller.yaml
 ```

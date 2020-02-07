@@ -254,7 +254,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to lookup devices from devicesPattern %s, err:%v", devicesPattern, err)
 	}
-	tags := []string{"vg.metal-pod.io/csi-lvm"}
+	tags := []string{"vg.metal-stack.io/csi-lvm"}
 
 	args := []string{"-v", name}
 	args = append(args, physicalVolumes...)
@@ -313,7 +313,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 		return "", fmt.Errorf("unsupported lvmtype: %s", lvmType)
 	}
 
-	tags := []string{"lv.metal-pod.io/csi-lvm"}
+	tags := []string{"lv.metal-stack.io/csi-lvm"}
 	for _, tag := range tags {
 		args = append(args, "--add-tag", tag)
 	}

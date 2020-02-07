@@ -1,4 +1,4 @@
-module github.com/metal-pod/csi-lvm
+module github.com/metal-stack/csi-lvm
 
 go 1.13
 

@@ -5,7 +5,7 @@ metadata:
   name: lvm-pvc-linear
   namespace: default
   annotations:
-    csi-lvm.metal-pod.io/type: "linear"
+    csi-lvm.metal-stack.io/type: "linear"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -21,7 +21,7 @@ metadata:
   name: lvm-pvc-mirror
   namespace: default
   annotations:
-    csi-lvm.metal-pod.io/type: "mirror"
+    csi-lvm.metal-stack.io/type: "mirror"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -37,7 +37,7 @@ metadata:
   name: lvm-pvc-striped
   namespace: default
   annotations:
-    csi-lvm.metal-pod.io/type: "striped"
+    csi-lvm.metal-stack.io/type: "striped"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -53,7 +53,7 @@ metadata:
   name: lvm-pvc-block
   namespace: default
   annotations:
-    csi-lvm.metal-pod.io/type: "linear"
+    csi-lvm.metal-stack.io/type: "linear"
 spec:
   accessModes:
     - ReadWriteOnce
