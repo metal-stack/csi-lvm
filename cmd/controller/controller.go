@@ -44,7 +44,7 @@ type lvmProvisioner struct {
 	pullPolicy     v1.PullPolicy
 }
 
-// NewLVMProvisioner creates a new hostpath provisioner
+// NewLVMProvisioner creates a new lvm provisioner
 func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage, defaultLVMType, pullPolicy string) controller.Provisioner {
 	pp := v1.PullAlways
 	if strings.ToLower(pullPolicy) == pullIfNotPresent {
@@ -150,7 +150,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 				v1.ResourceName(v1.ResourceStorage): options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
-				HostPath: &v1.HostPathVolumeSource{
+				Local: &v1.LocalVolumeSource{
 					Path: path,
 				},
 			},
@@ -355,11 +355,11 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 }
 
 func (p *lvmProvisioner) getPathAndNodeForPV(pv *v1.PersistentVolume) (path, node string, err error) {
-	hostPath := pv.Spec.PersistentVolumeSource.HostPath
-	if hostPath == nil {
-		return "", "", fmt.Errorf("no HostPath set")
+	localPvc := pv.Spec.PersistentVolumeSource.Local
+	if localPvc == nil {
+		return "", "", fmt.Errorf("no local PVC set")
 	}
-	path = hostPath.Path
+	path = localPvc.Path
 
 	nodeAffinity := pv.Spec.NodeAffinity
 	if nodeAffinity == nil {

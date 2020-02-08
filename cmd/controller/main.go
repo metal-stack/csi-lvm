@@ -157,9 +157,7 @@ func startDaemon(c *cli.Context) error {
 	}
 
 	provisioner := NewLVMProvisioner(kubeClient, namespace, mountPoint, devicePattern, provisionerImage, defaultLVMType, pullPolicy)
-	if err != nil {
-		return err
-	}
+
 	pc := pvController.NewProvisionController(
 		kubeClient,
 		provisionerName,
