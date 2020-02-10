@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"k8s.io/klog"
 )
 
@@ -29,7 +29,7 @@ func onUsageError(c *cli.Context, err error, isSubcommand bool) error {
 func main() {
 	p := cli.NewApp()
 	p.Usage = "LVM Provisioner Pod"
-	p.Commands = []cli.Command{
+	p.Commands = []*cli.Command{
 		createLVCmd(),
 		deleteLVCmd(),
 	}

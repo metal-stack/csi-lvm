@@ -7,7 +7,7 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -53,56 +53,58 @@ func registerShutdownChannel(done chan struct{}) {
 	}()
 }
 
-func startCmd() cli.Command {
-	return cli.Command{
+func startCmd() *cli.Command {
+	return &cli.Command{
 		Name: "start",
 		Flags: []cli.Flag{
-			cli.StringFlag{
-				Name:   flagProvisionerName,
-				Usage:  "Required. Specify Provisioner name.",
-				EnvVar: envProvisionerName,
-				Value:  defaultProvisionerName,
+			&cli.StringFlag{
+				Name:    flagProvisionerName,
+				Usage:   "Required. Specify Provisioner name.",
+				EnvVars: []string{envProvisionerName},
+				Value:   defaultProvisionerName,
 			},
-			cli.StringFlag{
-				Name:   flagNamespace,
-				Usage:  "Required. The namespace that Provisioner is running in",
-				EnvVar: envNamespace,
-				Value:  defaultNamespace,
+			&cli.StringFlag{
+				Name:    flagNamespace,
+				Usage:   "Required. The namespace that Provisioner is running in",
+				EnvVars: []string{envNamespace},
+				Value:   defaultNamespace,
 			},
-			cli.StringFlag{
-				Name:   flagProvisionerImage,
-				Usage:  "Required. The provisioner image used for create/delete lvm volumes on the host",
-				EnvVar: envProvisionerImage,
-				Value:  defaultProvisionerImage,
+			&cli.StringFlag{
+				Name:    flagProvisionerImage,
+				Usage:   "Required. The provisioner image used for create/delete lvm volumes on the host",
+				EnvVars: []string{envProvisionerImage},
+				Value:   defaultProvisionerImage,
 			},
-			cli.StringFlag{
-				Name:   flagDevicePattern,
-				Usage:  "Required. The pattern of the disk devices on the node to use",
-				EnvVar: envDevicePattern,
+			&cli.StringFlag{
+				Name:    flagDevicePattern,
+				Usage:   "Required. The pattern of the disk devices on the node to use",
+				EnvVars: []string{envDevicePattern},
 			},
-			cli.StringFlag{
-				Name:   flagDefaultLVMType,
-				Usage:  "Optional. the default lvm type to use, must be one of linear|striped|mirror",
-				EnvVar: envDefaultLVMType,
-				Value:  mirrorType,
+			&cli.StringFlag{
+				Name:    flagDefaultLVMType,
+				Usage:   "Optional. the default lvm type to use, must be one of linear|striped|mirror",
+				EnvVars: []string{envDefaultLVMType},
+				Value:   mirrorType,
 			},
-			cli.StringFlag{
-				Name:   flagMountPoint,
-				Usage:  "Optional. the mountpoint on the node where the volumes get mounted",
-				EnvVar: envMountPoint,
-				Value:  "/tmp/csi-lvm",
+			&cli.StringFlag{
+				Name:    flagMountPoint,
+				Usage:   "Optional. the mountpoint on the node where the volumes get mounted",
+				EnvVars: []string{envMountPoint},
+				Value:   "/tmp/csi-lvm",
 			},
-			cli.StringFlag{
-				Name:   flagProvisionerPodPullPolicy,
-				Usage:  "Optional. the pull policy for the provisioner pod, can be always|ifnotpresent",
-				EnvVar: envProvisionerPodPullPolicy,
-				Value:  pullAlways,
+			&cli.StringFlag{
+				Name:    flagProvisionerPodPullPolicy,
+				Usage:   "Optional. the pull policy for the provisioner pod, can be always|ifnotpresent",
+				EnvVars: []string{envProvisionerPodPullPolicy},
+				Value:   pullAlways,
 			},
 		},
-		Action: func(c *cli.Context) {
+		Action: func(c *cli.Context) error {
 			if err := startDaemon(c); err != nil {
 				klog.Fatalf("Error starting daemon: %v", err)
+				return err
 			}
+			return nil
 		},
 	}
 }
@@ -173,7 +175,7 @@ func startDaemon(c *cli.Context) error {
 func main() {
 	a := cli.NewApp()
 	a.Usage = "LVM Provisioner"
-	a.Commands = []cli.Command{
+	a.Commands = []*cli.Command{
 		startCmd(),
 	}
 	a.CommandNotFound = cmdNotFound
