@@ -40,6 +40,7 @@ k apply -f example/pvc.yaml
 - start using the pvc in different pod scenarios, see example pod-*.yaml
 
 ## NOTICE on block mount tests in minikube
+
 The busybox implementation of losetup lacks some flags on which the kubernetes currently depends on.
 (see https://github.com/kubernetes/kubernetes/issues/83265 )
 
@@ -47,7 +48,7 @@ So for block mounts on minikube you have to copy a "full" linux losetup binary t
 
 If you're on linux e.g.:
 
-```
+```bash
  minikube ssh 'sudo rm /sbin/losetup'
  scp -o 'StrictHostKeyChecking=no' -i $(minikube ssh-key) $(which losetup)  docker@$(minikube ip):/tmp/losetup
  minikube ssh 'sudo mv /tmp/losetup /sbin/losetup'
