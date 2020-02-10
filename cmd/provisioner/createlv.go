@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/google/lvmd/commands"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"k8s.io/klog"
 )
 
@@ -21,43 +21,45 @@ const (
 	mirrorType  = "mirror"
 )
 
-func createLVCmd() cli.Command {
-	return cli.Command{
+func createLVCmd() *cli.Command {
+	return &cli.Command{
 		Name: "createlv",
 		Flags: []cli.Flag{
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  flagLVName,
 				Usage: "Required. Specify lv name.",
 			},
-			cli.Uint64Flag{
+			&cli.Uint64Flag{
 				Name:  flagLVSize,
 				Usage: "Required. The size of the lv in MiB",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  flagVGName,
 				Usage: "Required. the name of the volumegroup",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  flagDirectory,
 				Usage: "Required. the name of the directory to mount the lv",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  flagLVMType,
 				Usage: "Required. type of lvs, can be either striped or mirrored",
 			},
-			cli.StringSliceFlag{
+			&cli.StringSliceFlag{
 				Name:  flagDevicesPattern,
 				Usage: "Required. the patterns of the physical volumes to use.",
 			},
-			cli.BoolFlag{
+			&cli.BoolFlag{
 				Name:  flagBlockMode,
 				Usage: "Optional. create a block device only, default false",
 			},
 		},
-		Action: func(c *cli.Context) {
+		Action: func(c *cli.Context) error {
 			if err := createLV(c); err != nil {
 				klog.Fatalf("Error creating lv: %v", err)
+				return err
 			}
+			return nil
 		},
 	}
 }
