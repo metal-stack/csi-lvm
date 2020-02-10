@@ -249,9 +249,10 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 			},
 			Containers: []v1.Container{
 				{
-					Name:  "csi-lvm-" + string(va.action),
-					Image: p.provisionerImage,
-					Args:  args,
+					Name:    "csi-lvm-" + string(va.action),
+					Image:   p.provisionerImage,
+					Command: "/csi-lvm-provisioner",
+					Args:    args,
 					VolumeMounts: []v1.VolumeMount{
 						{
 							Name:             "data",
