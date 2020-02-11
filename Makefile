@@ -26,3 +26,16 @@ dockerpush:
 .PHONY: clean
 clean:
 	rm -f bin/*
+
+.PHONY: tests
+tests:
+	@if minikube status >/dev/null 2>/dev/null; then echo "a minikube is already running. Exiting ..."; exit 1; fi
+	@echo "Starting minikube testing setup ... please wait ..."
+	@./deploy/start-minikube-on-linux.sh >/dev/null 2>/dev/null
+	@kubectl config view --flatten --minify > tests/files/.kubeconfig
+	@minikube docker-env > tests/files/.dockerenv
+	@sh -c '. ./tests/files/.dockerenv && docker build -t csi-lvm-tests tests' >/dev/null
+	@sh -c '. ./tests/files/.dockerenv && docker run --rm csi-lvm-tests bats /bats'
+	@rm tests/files/.dockerenv
+	@rm tests/files/.kubeconfig
+	@minikube delete
