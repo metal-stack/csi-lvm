@@ -78,7 +78,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: CSI_LVM_PULL_POLICY
-          value: "ifnotpresent"
+          value: "IfNotPresent"
         - name: CSI_LVM_PROVISIONER_IMAGE
           value: "metalstack/csi-lvm-provisioner:v0.4.1"
         - name: CSI_LVM_DEVICE_PATTERN

@@ -26,7 +26,7 @@
 } 
 
 @test "linear pvc bound" {
-    run sleep 20 
+    run sleep 40
     run kubectl get pvc lvm-pvc-linear -o jsonpath="{.metadata.name},{.status.phase}" 
     [ "$status" -eq 0 ]
     [ "$output" = "lvm-pvc-linear,Bound" ]

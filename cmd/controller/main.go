@@ -94,7 +94,7 @@ func startCmd() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:    flagProvisionerPodPullPolicy,
-				Usage:   "Optional. the pull policy for the provisioner pod, can be always|ifnotpresent",
+				Usage:   "Optional. the pull policy for the provisioner pod, can be Always|IfNotPresent",
 				EnvVars: []string{envProvisionerPodPullPolicy},
 				Value:   pullAlways,
 			},
