@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lvm-pvc-linear
+  namespace: default
+  annotations:
+    csi-lvm.metal-stack.io/type: "linear"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: csi-lvm
+  resources:
+    requests:
+      storage: 10Mi
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: volume-test
+  namespace: default
+spec:
+  containers:
+  - name: volume-test
+    image: nginx:stable-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: linear
+      mountPath: /linear
+
+    ports:
+    - containerPort: 80
+    resources:
+      limits:
+        cpu: 100m
+        memory: 100M
+  volumes:
+  - name: linear
+    persistentVolumeClaim:
+      claimName: lvm-pvc-linear
