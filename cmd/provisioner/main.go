@@ -32,6 +32,7 @@ func main() {
 	p.Commands = []*cli.Command{
 		createLVCmd(),
 		deleteLVCmd(),
+		reviveLVsCmd(),
 	}
 	p.CommandNotFound = cmdNotFound
 	p.OnUsageError = onUsageError

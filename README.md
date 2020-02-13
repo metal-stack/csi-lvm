@@ -6,7 +6,7 @@
 
 CSI LVM Provisioner utilizes local storage of Kubernetes nodes to provide persistent storage for pods.
 
-It automatically creates `hostPath` based persistent volumes on the nodes and makes use of the [Local Persistent Volume feature](https://kubernetes.io/blog/2018/04/13/local-persistent-volumes-beta/) introduced by Kubernetes 1.10 but it's simpler to use than the built-in `local` volume feature in Kubernetes. 
+It automatically creates `hostPath` based persistent volumes on the nodes and makes use of the [Local Persistent Volume feature](https://kubernetes.io/blog/2018/04/13/local-persistent-volumes-beta/) introduced by Kubernetes 1.10 but it's simpler to use than the built-in `local` volume feature in Kubernetes.
 
 Underneath it creates a LVM logical volume on the local disks. A grok pattern, which disks to use can be specified.
 
@@ -30,6 +30,11 @@ Kubernetes v1.12+.
 
 ### Installation
 
+The deployments consists of two parts:
+
+* A controller deployment, which is registerd as storage controller and schedules the creation and deletion of volumes
+* A reviver daemonset, which is responsible for re-creating the mount-structure after a reboot
+
 In this setup, the directory `/tmp/csi-lvm/<name of the pv>` will be used across all the nodes as the path for provisioning (a.k.a, store the persistent volume data). The provisioner will be installed in `csi-lvm` namespace by default.
 
 The default grok pattern for disks to use is `/dev/nvme[0-9]n*`, please check if this matches your setup, otherwise, copy *controller.yaml* to your local machine and modify the value of `CSI_LVM_DEVICE_PATTERN` accordingly.
@@ -43,6 +48,8 @@ If this is set you can install the csi-lvm with:
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/deploy/controller.yaml
+kubectl apply -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/deploy/reviver.yaml
+
 ```
 
 After installation, you should see something like the following:
@@ -51,6 +58,7 @@ After installation, you should see something like the following:
 $ kubectl -n csi-lvm get pod
 NAME                                     READY     STATUS    RESTARTS   AGE
 csi-lvm-controller-d744ccf98-xfcbk       1/1       Running   0          7m
+csi-lvm-reviver-ndh46                    1/1       Running   0          7m
 ```
 
 Check and follow the provisioner log using:
@@ -157,7 +165,7 @@ spec:
       serviceAccountName: csi-lvm-controller
       containers:
       - name: csi-lvm-controller
-        image: metalstack/csi-lvm-controller:v0.4.1
+        image: metalstack/csi-lvm-controller:v0.5.0
         imagePullPolicy: IfNotPresent
         command:
         - /csi-lvm-controller
@@ -169,9 +177,60 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: CSI_LVM_PROVISIONER_IMAGE
-          value: "metalstack/csi-lvm-provisioner:v0.4.1"
+          value: "metalstack/csi-lvm-provisioner:v0.5.0"
         - name: CSI_LVM_DEVICE_PATTERN
           value: "/dev/loop[0,1]"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: csi-lvm-reviver
+  namespace: csi-lvm
+spec:
+  selector:
+    matchLabels:
+      app: csi-lvm-reviver
+  template:
+    metadata:
+      labels:
+        app: csi-lvm-reviver
+    spec:
+      serviceAccountName: csi-lvm-reviver
+      containers:
+      - name: csi-lvm-reviver
+        image: metalstack/csi-lvm-provisioner:v0.5.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        env:
+          - name: CSI_LVM_MOUNTPOINT
+            value: "/tmp/csi-lvm"
+        command:
+        - /csi-lvm-provisioner
+        args:
+        - revivelvs
+        volumeMounts:
+          - mountPath: /tmp/csi-lvm
+            name: data
+            mountPropagation: Bidirectional
+          - mountPath: /dev
+            name: devices
+          - mountPath: /lib/modules
+            name: modules
+      volumes:
+        - hostPath:
+            path: /tmp/csi-lvm
+            type: DirectoryOrCreate
+          name: data
+        - hostPath:
+            path: /dev
+            type: DirectoryOrCreate
+          name: devices
+        - hostPath:
+            path: /lib/modules
+            type: DirectoryOrCreate
+          name: modules
+
 ```
 
 ### Definition
@@ -245,4 +304,5 @@ To uninstall, execute:
 
 ```bash
 kubectl delete -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/deploy/controller.yaml
+kubectl delete -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/deploy/reviver.yaml
 ```
