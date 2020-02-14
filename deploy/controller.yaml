@@ -66,7 +66,7 @@ spec:
       serviceAccountName: csi-lvm-controller
       containers:
       - name: csi-lvm-controller
-        image: metalstack/csi-lvm-controller:v0.4.1
+        image: metalstack/csi-lvm-controller:v0.5.0
         imagePullPolicy: IfNotPresent
         command:
         - /csi-lvm-controller
@@ -80,7 +80,7 @@ spec:
         - name: CSI_LVM_PULL_POLICY
           value: "IfNotPresent"
         - name: CSI_LVM_PROVISIONER_IMAGE
-          value: "metalstack/csi-lvm-provisioner:v0.4.1"
+          value: "metalstack/csi-lvm-provisioner:v0.5.0"
         - name: CSI_LVM_DEVICE_PATTERN
           # IMPORTANT: you cannot specify a wildcard (*) at any position in the devices grok.
           # value: "/dev/nvme[0-9]n[0-9]"
