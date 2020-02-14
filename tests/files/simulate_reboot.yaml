@@ -1,0 +1,55 @@
+# create /dev/loopX device nodes before they are needed.
+#
+# Normally, new nodes are created dynamically by the kernel. But nodes
+# in a KinD cluster are started with a copy of /dev from the host and
+# loop devices created later on do not show up in that static /dev
+# (https://github.com/kubernetes-sigs/kind/issues/1248). Creating
+# "enough" (100 in this pod) in advance avoids running out of
+# loop devices.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simulate-reboot
+  namespace: kube-system
+spec:
+  tolerations:
+  - operator: Exists
+    effect: NoSchedule
+  containers:
+  - name: simulate-reboot
+    command:
+    - sh
+    - -c
+    - |
+      for pvc in $(ls /tmp/csi-lvm/|grep pvc); do
+        umount "/tmp/csi-lvm/$pvc"
+        rm "/tmp/csi-lvm/$pvc" 
+        rmdir "/tmp/csi-lvm/$pvc" 
+      done
+      sleep 100000
+    image: alpine:3.6
+    imagePullPolicy: IfNotPresent
+    resources: {}
+    securityContext:
+      privileged: true
+    volumeMounts:
+      - mountPath: /tmp/csi-lvm
+        name: data
+        mountPropagation: Bidirectional
+      - mountPath: /dev
+        name: devices
+      - mountPath: /lib/modules
+        name: modules
+  volumes:
+    - hostPath:
+        path: /tmp/csi-lvm
+        type: DirectoryOrCreate
+      name: data
+    - hostPath:
+        path: /dev
+        type: DirectoryOrCreate
+      name: devices
+    - hostPath:
+        path: /lib/modules
+        type: DirectoryOrCreate
+      name: modules

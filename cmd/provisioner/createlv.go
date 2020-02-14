@@ -98,7 +98,7 @@ func createLV(c *cli.Context) error {
 		return fmt.Errorf("unable to create vg: %v output:%s", err, output)
 	}
 
-	output, err = createLVS(context.Background(), vgName, lvName, lvSize, lvmType)
+	output, err = createLVS(context.Background(), vgName, lvName, lvSize, lvmType, blockMode)
 	if err != nil {
 		return fmt.Errorf("unable to create lv: %v output:%s", err, output)
 	}
@@ -227,29 +227,32 @@ func vgExists(name string) bool {
 	return vgexists
 }
 
+func vgactivate(name string) {
+	// scan for vgs and activate if any
+	cmd := exec.Command("vgscan")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		klog.Infof("unable to scan for volumegroups:%s %v", out, err)
+	}
+	cmd = exec.Command("vgchange", "-ay")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		klog.Infof("unable to activate volumegroups:%s %v", out, err)
+	}
+}
+
 func createVG(name string, devicesPattern []string) (string, error) {
 	vgexists := vgExists(name)
 	if vgexists {
 		klog.Infof("volumegroup: %s already exists\n", name)
 		return name, nil
-	} else {
-		// scan for vgs and activate if any
-		cmd := exec.Command("vgscan")
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			klog.Infof("unable to scan for volumegroups:%s %v", out, err)
-		}
-		cmd = exec.Command("vgchange", "-ay")
-		_, err = cmd.CombinedOutput()
-		if err != nil {
-			klog.Infof("unable to activate volumegroups:%s %v", out, err)
-		}
-		// now check again for existing vg again
-		vgexists = vgExists(name)
-		if vgexists {
-			klog.Infof("volumegroup: %s already exists\n", name)
-			return name, nil
-		}
+	}
+	vgactivate(name)
+	// now check again for existing vg again
+	vgexists = vgExists(name)
+	if vgexists {
+		klog.Infof("volumegroup: %s already exists\n", name)
+		return name, nil
 	}
 
 	physicalVolumes, err := devices(devicesPattern)
@@ -270,7 +273,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 }
 
 // createLV creates a new volume
-func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string) (string, error) {
+func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string, blockMode bool) (string, error) {
 	lvs, err := commands.ListLV(context.Background(), vg+"/"+name)
 	if err != nil {
 		klog.Infof("unable to list existing logicalvolumes:%v", err)
@@ -315,7 +318,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 		return "", fmt.Errorf("unsupported lvmtype: %s", lvmType)
 	}
 
-	tags := []string{"lv.metal-stack.io/csi-lvm"}
+	tags := []string{"lv.metal-stack.io/csi-lvm", "isBlock=" + strconv.FormatBool(blockMode)}
 	for _, tag := range tags {
 		args = append(args, "--add-tag", tag)
 	}
