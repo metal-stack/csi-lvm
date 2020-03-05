@@ -122,6 +122,12 @@ spec:
             name: devices
           - mountPath: /lib/modules
             name: modules
+          - mountPath: /etc/lvm/backup
+            name: lvmbackup
+            mountPropagation: Bidirectional
+          - mountPath: /etc/lvm/cache
+            name: lvmcache
+            mountPropagation: Bidirectional
       volumes:
         - hostPath:
             path: /tmp/csi-lvm
@@ -135,3 +141,11 @@ spec:
             path: /lib/modules
             type: DirectoryOrCreate
           name: modules
+        - hostPath:
+            path: /etc/lvm/backup
+            type: DirectoryOrCreate
+          name: lvmbackup
+        - hostPath:
+            path: /etc/lvm/cache
+            type: DirectoryOrCreate
+          name: lvmcache

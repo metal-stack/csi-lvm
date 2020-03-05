@@ -40,15 +40,32 @@ func reviveLVsCmd() *cli.Command {
 			}
 			// stay alive
 			for {
-				time.Sleep(time.Hour)
+				logStatus()
+				time.Sleep(5 * time.Minute)
 			}
 		},
 	}
 }
 
+// logStatus will log lvs and vgs to make them visible
+func logStatus() {
+	cmd := exec.Command("vgs")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		klog.Errorf("unable to display volume group:%s %v", out, err)
+	}
+	klog.Infof("vgs output:%v", out)
+	cmd = exec.Command("lvs")
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		klog.Errorf("unable to display logical volume:%s %v", out, err)
+	}
+	klog.Infof("lvs output:%v", out)
+}
+
 // reviveLVs scans for existing volumes which are not mounted correctly
 func reviveLVs(c *cli.Context) error {
-	klog.Infof("starting reviver: %s", c)
+	klog.Info("starting reviver")
 	vgName := c.String(flagVGName)
 	if vgName == "" {
 		return fmt.Errorf("invalid empty flag %v", flagVGName)
@@ -85,9 +102,15 @@ func reviveLVs(c *cli.Context) error {
 			klog.Infof("target %s is missing. Reviving ...\n", targetPath)
 			for _, n := range lv.Tags {
 				if n == "isBlock=true" {
-					bindMountLV(lv.Name, vgName, dirName)
+					_, err := bindMountLV(lv.Name, vgName, dirName)
+					if err != nil {
+						klog.Errorf("unable to bind mount lv:%s error:%v", lv.Name, err)
+					}
 				} else if n == "isBlock=false" {
-					mountLV(lv.Name, vgName, dirName)
+					_, err := mountLV(lv.Name, vgName, dirName)
+					if err != nil {
+						klog.Errorf("unable to mount lv:%s error:%v", lv.Name, err)
+					}
 				}
 			}
 		} else {
@@ -108,7 +131,10 @@ func reviveLVs(c *cli.Context) error {
 					blockMode = false
 				}
 				klog.Infof("volume %s lacks isBlock tags. Readding isBlock=%t\n", targetPath, blockMode)
-				commands.AddTagLV(context.Background(), vgName, lv.Name, []string{"lv.metal-stack.io/csi-lvm", "isBlock=" + strconv.FormatBool(blockMode)})
+				_, err := commands.AddTagLV(context.Background(), vgName, lv.Name, []string{"lv.metal-stack.io/csi-lvm", "isBlock=" + strconv.FormatBool(blockMode)})
+				if err != nil {
+					klog.Errorf("unable to add tag to lv:%s error:%v", lv.Name, err)
+				}
 			}
 		}
 	}
