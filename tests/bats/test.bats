@@ -7,7 +7,7 @@
 
 
 @test "csi-lvm-controller running" {
-    run kubectl wait -n csi-lvm --for=condition=Available deployment/csi-lvm-controller --timeout=20s
+    run kubectl wait -n csi-lvm --for=condition=Available deployment/csi-lvm-controller --timeout=120s
     [ "$status" -eq 0 ]
     [ $(expr "$output" : "csi-lvm-controller.*Running") ]
 }
@@ -45,7 +45,7 @@
 }
 
 @test "block pvc bound" {
-    run kubectl wait -n default --for=condition=ready pod/volume-test-block --timeout=40s
+    run kubectl wait -n default --for=condition=ready pod/volume-test-block --timeout=80s
     run kubectl get pvc lvm-pvc-block -o jsonpath="{.metadata.name},{.status.phase}"
     [ "$status" -eq 0 ]
     [ "$output" = "lvm-pvc-block,Bound" ]
@@ -114,13 +114,11 @@
 }
 
 @test "block pod running again" {
-    run kubectl wait -n default --for=condition=ready pod/volume-test-block --timeout=20s
+    run kubectl wait -n default --for=condition=ready pod/volume-test-block --timeout=80s
     run kubectl get pods volume-test-block -o jsonpath="{.metadata.name},{.status.phase}"
     [ "$status" -eq 0 ]
     [ "$output" = "volume-test-block,Running" ]
 }
-
-
 
 @test "final delete linear pod" {
     run kubectl delete -f /files/linear.yaml
