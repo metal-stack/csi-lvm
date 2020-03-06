@@ -1,6 +1,7 @@
 #!/usr/bin/env bats -p
 
 @test "deploy csi-lvm-controller" {
+    run sleep 30
     run kubectl apply -f /files/controller.yaml
     [ "$status" -eq 0 ]
 }

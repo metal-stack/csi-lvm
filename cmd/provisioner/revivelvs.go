@@ -54,13 +54,13 @@ func logStatus() {
 	if err != nil {
 		klog.Errorf("unable to display volume group:%s %v", out, err)
 	}
-	klog.Infof("vgs output:%v", out)
+	klog.Infof("vgs output:%s", out)
 	cmd = exec.Command("lvs")
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		klog.Errorf("unable to display logical volume:%s %v", out, err)
 	}
-	klog.Infof("lvs output:%v", out)
+	klog.Infof("lvs output:%s", out)
 }
 
 // reviveLVs scans for existing volumes which are not mounted correctly
