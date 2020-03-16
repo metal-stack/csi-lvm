@@ -5,12 +5,12 @@ all: provisioner controller
 
 .PHONY: provisioner
 provisioner:
-	go build -tags netgo -o bin/csi-lvm-provisioner cmd/provisioner/*.go
+	go build -trimpath -tags netgo -o bin/csi-lvm-provisioner cmd/provisioner/*.go
 	strip bin/csi-lvm-provisioner
 
 .PHONY: controller
 controller:
-	go build -tags netgo -o bin/csi-lvm-controller cmd/controller/*.go
+	go build -trimpath -tags netgo -o bin/csi-lvm-controller cmd/controller/*.go
 	strip bin/csi-lvm-controller
 
 .PHONY: dockerimages
