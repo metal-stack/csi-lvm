@@ -16,4 +16,5 @@ require (
 	k8s.io/client-go v0.17.4
 	k8s.io/klog v1.0.0
 	sigs.k8s.io/sig-storage-lib-external-provisioner v4.1.0+incompatible
+	k8s.io/kubectl v0.17.4
 )

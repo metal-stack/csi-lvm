@@ -323,7 +323,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 		args = append(args, "--add-tag", tag)
 	}
 	args = append(args, vg)
-	klog.Infof("lvreate %s", args)
+	klog.Infof("lvcreate %s", args)
 	cmd := exec.Command("lvcreate", args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err

@@ -25,7 +25,7 @@ spec:
   - '*'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: csi-lvm-reviver-psp
   namespace: csi-lvm
@@ -40,7 +40,7 @@ rules:
   - use
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: csi-lvm-reviver
   namespace: csi-lvm
@@ -51,15 +51,18 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create", "patch"]
+- apiGroups: [""]
+  resources: ["nodes/status", "nodes"]
+  verbs: ["patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: csi-lvm-reviver-psp
   namespace: csi-lvm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: csi-lvm-reviver-psp
 subjects:
 - apiGroup: ""
@@ -68,13 +71,13 @@ subjects:
   namespace: csi-lvm
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: csi-lvm-reviver
   namespace: csi-lvm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: csi-lvm-reviver
 subjects:
 - kind: ServiceAccount
@@ -105,6 +108,14 @@ spec:
         env:
           - name: CSI_LVM_MOUNTPOINT
             value: "/tmp/csi-lvm"
+          - name: CSI_LVM_TYPE
+            value: "linear"
+          - name: CSI_LVM_DEVICE_PATTERN
+            value: "/dev/loop[0-1]"
+          - name: CSI_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
         command:
         - /csi-lvm-provisioner
         args:
@@ -117,6 +128,15 @@ spec:
             name: devices
           - mountPath: /lib/modules
             name: modules
+          - mountPath: /etc/lvm/backup
+            name: lvmbackup
+            mountPropagation: Bidirectional
+          - mountPath: /etc/lvm/cache
+            name: lvmcache
+            mountPropagation: Bidirectional
+          - mountPath: /etc/lvm/archive
+            name: lvmarchive
+            mountPropagation: Bidirectional
       volumes:
         - hostPath:
             path: /tmp/csi-lvm
@@ -130,3 +150,15 @@ spec:
             path: /lib/modules
             type: DirectoryOrCreate
           name: modules
+        - hostPath:
+            path: /etc/lvm/backup
+            type: DirectoryOrCreate
+          name: lvmbackup
+        - hostPath:
+            path: /etc/lvm/cache
+            type: DirectoryOrCreate
+          name: lvmcache
+        - hostPath:
+            path: /etc/lvm/archive
+            type: DirectoryOrCreate
+          name: lvmarchive

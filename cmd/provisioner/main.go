@@ -16,6 +16,7 @@ const (
 	flagDirectory      = "directory"
 	flagLVMType        = "lvmtype"
 	flagBlockMode      = "block"
+	flagNodeName       = "nodename"
 )
 
 func cmdNotFound(c *cli.Context, command string) {
