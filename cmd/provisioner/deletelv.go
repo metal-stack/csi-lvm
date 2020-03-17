@@ -77,10 +77,10 @@ func umountLV(lvname, vgname, directory string) (string, error) {
 	lvPath := fmt.Sprintf("/dev/%s/%s", vgname, lvname)
 	mountPath := path.Join(directory, lvname)
 
-	cmd := exec.Command("umount", "--lazy", "--force", lvPath)
+	cmd := exec.Command("umount", "--lazy", "--force", mountPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Errorf("unable to umount %s from %s output:%s err:%v", lvPath, mountPath, string(out), err)
+		klog.Errorf("unable to umount %s from %s output:%s err:%v", mountPath, lvPath, string(out), err)
 	}
 	err = os.Remove(mountPath)
 	if err != nil {

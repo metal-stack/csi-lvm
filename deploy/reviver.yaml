@@ -103,7 +103,7 @@ spec:
       serviceAccountName: csi-lvm-reviver
       containers:
       - name: csi-lvm-reviver
-        image: metalstack/csi-lvm-provisioner:v0.5.0
+        image: metalstack/csi-lvm-provisioner:v0.6.1
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
