@@ -282,6 +282,12 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 							MountPath:        "/etc/lvm/cache",
 							MountPropagation: &mountPropagation,
 						},
+						{
+							Name:             "lvmlock",
+							ReadOnly:         false,
+							MountPath:        "/run/lock/lvm",
+							MountPropagation: &mountPropagation,
+						},
 					},
 					ImagePullPolicy: p.pullPolicy,
 					SecurityContext: &v1.SecurityContext{
@@ -341,6 +347,15 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 					VolumeSource: v1.VolumeSource{
 						HostPath: &v1.HostPathVolumeSource{
 							Path: "/etc/lvm/cache",
+							Type: &hostPathType,
+						},
+					},
+				},
+				{
+					Name: "lvmlock",
+					VolumeSource: v1.VolumeSource{
+						HostPath: &v1.HostPathVolumeSource{
+							Path: "/run/lock/lvm",
 							Type: &hostPathType,
 						},
 					},

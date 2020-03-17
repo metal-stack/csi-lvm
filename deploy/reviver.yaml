@@ -128,6 +128,9 @@ spec:
           - mountPath: /etc/lvm/cache
             name: lvmcache
             mountPropagation: Bidirectional
+          - mountPath: /run/lock/lvm
+            name: lvmlock
+            mountPropagation: Bidirectional
       volumes:
         - hostPath:
             path: /tmp/csi-lvm
@@ -149,3 +152,7 @@ spec:
             path: /etc/lvm/cache
             type: DirectoryOrCreate
           name: lvmcache
+        - hostPath:
+            path: /run/lock/lvm
+            type: DirectoryOrCreate
+          name: lvmlock
