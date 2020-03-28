@@ -1,5 +1,14 @@
 FROM alpine
 
+ARG prtag
+ENV PRTAG=$prtag
+
+ARG prpullpolicy
+ENV PRPULLPOLICY=$prpullpolicy
+
+ARG prdevicepattern
+ENV PRDEVICEPATTERN=$prdevicepattern
+
 ENV KUBECONFIG /files/.kubeconfig
 
 RUN apk add --update ca-certificates \

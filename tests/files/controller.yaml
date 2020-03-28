@@ -1,26 +1,21 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: csi-lvm
----
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: csi-lvm
-provisioner: metal-stack.io/csi-lvm
+  name: csi-lvm-PRTAG
+provisioner: metal-stack.io/csi-lvm-PRTAG
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: csi-lvm-controller
-  namespace: csi-lvm
+  name: csi-lvm-controller-PRTAG
+  namespace: PRTAG
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: csi-lvm-controller
+  name: csi-lvm-controller-PRTAG
 rules:
 - apiGroups: [""]
   resources: ["nodes", "persistentvolumeclaims"]
@@ -35,39 +30,89 @@ rules:
   resources: ["storageclasses"]
   verbs: ["get", "list", "watch"]
 ---
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: csi-lvm-controller-psp-PRTAG
+  namespace: PRTAG
+spec:
+  allowPrivilegeEscalation: true
+  privileged: true
+  fsGroup:
+    rule: RunAsAny
+  privileged: true
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+  - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: csi-lvm-controller-psp-PRTAG
+  namespace: PRTAG
+rules:
+- apiGroups:
+  - extensions
+  resources:
+  - podsecuritypolicies
+  resourceNames:
+  - csi-lvm-controller-psp-PRTAG
+  verbs:
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: csi-lvm-controller-psp-PRTAG
+  namespace: PRTAG
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: csi-lvm-controller-psp-PRTAG
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: csi-lvm-controller-PRTAG
+  namespace: PRTAG
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: csi-lvm-controller
+  name: csi-lvm-controller-PRTAG
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: csi-lvm-controller
+  name: csi-lvm-controller-PRTAG
 subjects:
 - kind: ServiceAccount
-  name: csi-lvm-controller
-  namespace: csi-lvm
+  name: csi-lvm-controller-PRTAG
+  namespace: PRTAG
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: csi-lvm-controller
-  namespace: csi-lvm
+  name: csi-lvm-controller-PRTAG
+  namespace: PRTAG
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: csi-lvm-controller
+      app: csi-lvm-controller-PRTAG
   template:
     metadata:
       labels:
-        app: csi-lvm-controller
+        app: csi-lvm-controller-PRTAG
     spec:
-      serviceAccountName: csi-lvm-controller
+      serviceAccountName: csi-lvm-controller-PRTAG
       containers:
       - name: csi-lvm-controller
-        image: metalstack/csi-lvm-controller
-        imagePullPolicy: IfNotPresent
+        image: metalstack/csi-lvm-controller:PRTAG
+        imagePullPolicy: PRPULLPOLICY
         command:
         - /csi-lvm-controller
         args:
@@ -78,11 +123,10 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: CSI_LVM_PULL_POLICY
-          value: "IfNotPresent"
+          value: "PRPULLPOLICY"
         - name: CSI_LVM_PROVISIONER_IMAGE
-          value: "metalstack/csi-lvm-provisioner"
+          value: "metalstack/csi-lvm-provisioner:PRTAG"
         - name: CSI_LVM_DEVICE_PATTERN
-          # IMPORTANT: you cannot specify a wildcard (*) at any position in the devices grok.
-          # value: "/dev/nvme[0-9]n[0-9]"
-          # value: "/dev/sd[abcd]"
-          value: "/dev/loop[0-1]"
+          value: "/dev/PRDEVICEPATTERN"
+        - name: PROVISIONER_NAME
+          value: "metal-stack.io/csi-lvm-PRTAG"

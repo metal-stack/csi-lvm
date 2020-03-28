@@ -10,7 +10,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: simulate-reboot
-  namespace: kube-system
+  namespace: PRTAG
 spec:
   tolerations:
   - operator: Exists
@@ -26,7 +26,7 @@ spec:
         rm "/tmp/csi-lvm/$pvc" 
         rmdir "/tmp/csi-lvm/$pvc" 
       done
-      sleep 100000
+      sleep 1000
     image: alpine:3.6
     imagePullPolicy: IfNotPresent
     resources: {}
