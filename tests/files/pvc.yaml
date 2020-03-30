@@ -2,14 +2,14 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: lvm-pvc-block
-  namespace: default
+  namespace: PRTAG
   annotations:
     csi-lvm.metal-stack.io/type: "linear"
 spec:
   accessModes:
     - ReadWriteOnce
   volumeMode: Block
-  storageClassName: csi-lvm
+  storageClassName: csi-lvm-PRTAG
   resources:
     requests:
       storage: 10Mi
@@ -18,13 +18,13 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: lvm-pvc-linear
-  namespace: default
+  namespace: PRTAG
   annotations:
     csi-lvm.metal-stack.io/type: "linear"
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: csi-lvm
+  storageClassName: csi-lvm-PRTAG
   resources:
     requests:
       storage: 10Mi

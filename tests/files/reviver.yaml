@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: csi-lvm-reviver
-  namespace: csi-lvm
+  name: csi-lvm-reviver-PRTAG
+  namespace: PRTAG
 ---
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: csi-lvm-reviver-psp
-  namespace: csi-lvm
+  name: csi-lvm-reviver-psp-PRTAG
+  namespace: PRTAG
 spec:
   allowPrivilegeEscalation: true
   privileged: true
@@ -27,23 +27,23 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: csi-lvm-reviver-psp
-  namespace: csi-lvm
+  name: csi-lvm-reviver-psp-PRTAG
+  namespace: PRTAG
 rules:
 - apiGroups:
   - extensions
   resources:
   - podsecuritypolicies
   resourceNames:
-  - csi-lvm-reviver-psp
+  - csi-lvm-reviver-psp-PRTAG
   verbs:
   - use
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: csi-lvm-reviver
-  namespace: csi-lvm
+  name: csi-lvm-reviver-PRTAG
+  namespace: PRTAG
 rules:
 - apiGroups: [""]
   resources: ["persistentvolumes"]
@@ -55,51 +55,51 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: RoleBinding
 metadata:
-  name: csi-lvm-reviver-psp
-  namespace: csi-lvm
+  name: csi-lvm-reviver-psp-PRTAG
+  namespace: PRTAG
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: csi-lvm-reviver-psp
+  name: csi-lvm-reviver-psp-PRTAG
 subjects:
 - apiGroup: ""
   kind: ServiceAccount
-  name: csi-lvm-reviver
-  namespace: csi-lvm
+  name: csi-lvm-reviver-PRTAG
+  namespace: PRTAG
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: csi-lvm-reviver
-  namespace: csi-lvm
+  name: csi-lvm-reviver-PRTAG
+  namespace: PRTAG
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: csi-lvm-reviver
+  name: csi-lvm-reviver-PRTAG
 subjects:
 - kind: ServiceAccount
-  name: csi-lvm-reviver
-  namespace: csi-lvm
+  name: csi-lvm-reviver-PRTAG
+  namespace: PRTAG
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: csi-lvm-reviver
-  namespace: csi-lvm
+  name: csi-lvm-reviver-PRTAG
+  namespace: PRTAG
 spec:
   selector:
     matchLabels:
-      app: csi-lvm-reviver
+      app: csi-lvm-reviver-PRTAG
   template:
     metadata:
       labels:
-        app: csi-lvm-reviver
+        app: csi-lvm-reviver-PRTAG
     spec:
-      serviceAccountName: csi-lvm-reviver
+      serviceAccountName: csi-lvm-reviver-PRTAG
       containers:
       - name: csi-lvm-reviver
-        image: metalstack/csi-lvm-provisioner
-        imagePullPolicy: IfNotPresent
+        image: metalstack/csi-lvm-provisioner:PRTAG
+        imagePullPolicy: PRPULLPOLICY
         securityContext:
           privileged: true
         env:

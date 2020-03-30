@@ -34,19 +34,15 @@ tests:
 	@./deploy/start-minikube-on-linux.sh >/dev/null 2>/dev/null
 	@kubectl config view --flatten --minify > tests/files/.kubeconfig
 	@minikube docker-env > tests/files/.dockerenv
-	@sh -c '. ./tests/files/.dockerenv && docker build -t metalstack/csi-lvm-provisioner . -f cmd/provisioner/Dockerfile'
-	@sh -c '. ./tests/files/.dockerenv && docker build -t metalstack/csi-lvm-controller . -f cmd/controller/Dockerfile'
-	@sh -c '. ./tests/files/.dockerenv && docker build -t csi-lvm-tests tests' >/dev/null
-	@sh -c '. ./tests/files/.dockerenv && docker run --rm csi-lvm-tests bats /bats'
+	@sh -c '. ./tests/files/.dockerenv && docker build -t metalstack/csi-lvm-provisioner:${DOCKER_TAG} . -f cmd/provisioner/Dockerfile'
+	@sh -c '. ./tests/files/.dockerenv && docker build -t metalstack/csi-lvm-controller:${DOCKER_TAG} . -f cmd/controller/Dockerfile'
+	@sh -c '. ./tests/files/.dockerenv && docker build -t csi-lvm-tests:${DOCKER_TAG} --build-arg prtag=${DOCKER_TAG} --build-arg prpullpolicy="IfNotPresent" --build-arg prdevicepattern="loop[0-1]" tests' >/dev/null
+	@sh -c '. ./tests/files/.dockerenv && docker run --rm csi-lvm-tests:${DOCKER_TAG} bats /bats/start.bats /bats/revive.bats /bats/end.bats'
 	@rm tests/files/.dockerenv
 	@rm tests/files/.kubeconfig
 	@minikube delete
 
-.PHONY: cijob
-cijob:	
-	./tests/files/start-minikube-on-github.sh 
-	kubectl config view --flatten --minify > tests/files/.kubeconfig
-	docker build -t metalstack/csi-lvm-provisioner . -f cmd/provisioner/Dockerfile
-	docker build -t metalstack/csi-lvm-controller . -f cmd/controller/Dockerfile
-	docker build -t csi-lvm-tests tests > /dev/null
-	docker run --rm csi-lvm-tests bats /bats
+.PHONY: metalci
+metalci: dockerimages dockerpush
+	docker build -t csi-lvm-tests:${DOCKER_TAG} --build-arg prtag=${DOCKER_TAG} --build-arg prpullpolicy="Always" --build-arg prdevicepattern='nvme[0-9]n[0-9]' tests > /dev/null
+	docker run --rm csi-lvm-tests:${DOCKER_TAG} bats /bats/start.bats /bats/cycle.bats /bats/end.bats
