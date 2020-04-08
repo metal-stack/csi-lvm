@@ -18,6 +18,7 @@ import (
 
 const (
 	keyNode          = "kubernetes.io/hostname"
+	typeAnnotation   = "csi-lvm.metal-stack.io/type"
 	linearType       = "linear"
 	stripedType      = "striped"
 	mirrorType       = "mirror"
@@ -95,7 +96,6 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 
 	lvmType := p.defaultLVMType
 
-	typeAnnotation := p.vgName + ".metal-stack.io/type"
 	userAnnotation, ok := options.PVC.Annotations[typeAnnotation]
 	if ok {
 		lvmType = userAnnotation
@@ -251,7 +251,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 			},
 			Containers: []v1.Container{
 				{
-					Name:    p.vgName + "-" + string(va.action),
+					Name:    "csi-lvm-" + string(va.action),
 					Image:   p.provisionerImage,
 					Command: []string{"/csi-lvm-provisioner"},
 					Args:    args,
