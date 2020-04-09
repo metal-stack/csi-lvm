@@ -22,6 +22,8 @@ var (
 	flagNamespace                = "namespace"
 	envNamespace                 = "CSI_LVM_PROVISIONER_NAMESPACE"
 	defaultNamespace             = "csi-lvm"
+	flagVgName                   = "vgname"
+	envVgName                    = "CSI_LVM_VG_NAME"
 	flagProvisionerImage         = "provisioner-image"
 	envProvisionerImage          = "CSI_LVM_PROVISIONER_IMAGE"
 	defaultProvisionerImage      = "metalstack/csi-lvm-provisioner"
@@ -68,6 +70,12 @@ func startCmd() *cli.Command {
 				Usage:   "Required. The namespace that Provisioner is running in",
 				EnvVars: []string{envNamespace},
 				Value:   defaultNamespace,
+			},
+			&cli.StringFlag{
+				Name:    flagVgName,
+				Usage:   "Required. LVM volume group name",
+				EnvVars: []string{envVgName},
+				Value:   "csi-lvm",
 			},
 			&cli.StringFlag{
 				Name:    flagProvisionerImage,
@@ -136,6 +144,10 @@ func startDaemon(c *cli.Context) error {
 	if namespace == "" {
 		return fmt.Errorf("invalid empty flag %v", flagNamespace)
 	}
+	vgName := c.String(flagVgName)
+	if vgName == "" {
+		return fmt.Errorf("invalid empty flag %v", flagVgName)
+	}
 	provisionerImage := c.String(flagProvisionerImage)
 	if provisionerImage == "" {
 		return fmt.Errorf("invalid empty flag %v", flagProvisionerImage)
@@ -158,7 +170,7 @@ func startDaemon(c *cli.Context) error {
 		return fmt.Errorf("invalid empty flag %v", flagProvisionerPodPullPolicy)
 	}
 
-	provisioner := NewLVMProvisioner(kubeClient, namespace, mountPoint, devicePattern, provisionerImage, defaultLVMType, pullPolicy)
+	provisioner := NewLVMProvisioner(kubeClient, namespace, vgName, mountPoint, devicePattern, provisionerImage, defaultLVMType, pullPolicy)
 
 	pc := pvController.NewProvisionController(
 		kubeClient,

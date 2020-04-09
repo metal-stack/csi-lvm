@@ -42,10 +42,11 @@ type lvmProvisioner struct {
 	// defaultLVMType the lvm type to use by default if not overwritten in the pvc spec.
 	defaultLVMType string
 	pullPolicy     v1.PullPolicy
+	vgName         string
 }
 
 // NewLVMProvisioner creates a new lvm provisioner
-func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, devicePattern, provisionerImage, defaultLVMType, pullPolicy string) controller.Provisioner {
+func NewLVMProvisioner(kubeClient clientset.Interface, namespace, vgName, lvDir, devicePattern, provisionerImage, defaultLVMType, pullPolicy string) controller.Provisioner {
 	pp := v1.PullAlways
 	if strings.ToLower(pullPolicy) == pullIfNotPresent {
 		pp = v1.PullIfNotPresent
@@ -57,6 +58,7 @@ func NewLVMProvisioner(kubeClient clientset.Interface, namespace, lvDir, deviceP
 		provisionerImage: provisionerImage,
 		kubeClient:       kubeClient,
 		namespace:        namespace,
+		vgName:           vgName,
 		defaultLVMType:   defaultLVMType,
 		pullPolicy:       pp,
 	}
@@ -226,7 +228,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	if va.action == actionTypeDelete {
 		args = append(args, "deletelv")
 	}
-	args = append(args, "--lvname", va.name, "--vgname", "csi-lvm", "--directory", p.lvDir)
+	args = append(args, "--lvname", va.name, "--vgname", p.vgName, "--directory", p.lvDir)
 	if va.isBlock {
 		args = append(args, "--block")
 	}
