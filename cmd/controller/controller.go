@@ -239,7 +239,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	privileged := true
 	provisionerPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: p.vgName + string(va.action) + "-" + va.name,
+			Name: string(va.action) + "-" + va.name,
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy: v1.RestartPolicyNever,
