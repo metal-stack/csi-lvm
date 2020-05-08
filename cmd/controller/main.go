@@ -12,7 +12,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
-	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/v5/controller"
 )
 
 var (
