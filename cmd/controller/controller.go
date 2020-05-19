@@ -381,7 +381,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	}()
 
 	completed := false
-	retrySeconds := 20
+	retrySeconds := 60
 	for i := 0; i < retrySeconds; i++ {
 		pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(provisionerPod.Name, metav1.GetOptions{})
 		if err != nil {
