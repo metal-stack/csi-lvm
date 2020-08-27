@@ -1,18 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog"
-	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/v5/controller"
+	"k8s.io/klog/v2"
+	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 )
 
 var (
@@ -43,16 +42,6 @@ func cmdNotFound(c *cli.Context, command string) {
 
 func onUsageError(c *cli.Context, err error, isSubcommand bool) error {
 	panic(fmt.Errorf("Usage error, please check your command"))
-}
-
-func registerShutdownChannel(done chan struct{}) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-sigs
-		klog.Infof("Receive %v to exit", sig)
-		close(done)
-	}()
 }
 
 func startCmd() *cli.Command {
@@ -118,8 +107,6 @@ func startCmd() *cli.Command {
 }
 
 func startDaemon(c *cli.Context) error {
-	stopCh := make(chan struct{})
-	registerShutdownChannel(stopCh)
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -179,7 +166,7 @@ func startDaemon(c *cli.Context) error {
 		serverVersion.GitVersion,
 	)
 	klog.Info("Provisioner started")
-	pc.Run(stopCh)
+	pc.Run(context.Background())
 	klog.Info("Provisioner stopped")
 	return nil
 }

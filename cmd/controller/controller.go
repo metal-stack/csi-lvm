@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"strings"
@@ -11,9 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v5/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -79,16 +80,16 @@ type volumeAction struct {
 // SupportsBlock returns whether provisioner supports block volume.
 // this is required for mixed setups where pv´s mounted in pods
 // and block devices must be possible on the same node
-func (p *lvmProvisioner) SupportsBlock() bool {
+func (p *lvmProvisioner) SupportsBlock(ctx context.Context) bool {
 	return true
 }
 
 // Provision creates a storage asset and returns a PV object representing it.
-func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.PersistentVolume, error) {
+func (p *lvmProvisioner) Provision(ctx context.Context, options controller.ProvisionOptions) (*v1.PersistentVolume, controller.ProvisioningState, error) {
 	klog.Infof("start provision %s node:%s devices:%s", options.PVName, options.SelectedNode.GetName(), p.devicePattern)
 	node := options.SelectedNode
 	if node == nil {
-		return nil, fmt.Errorf("configuration error, no node was specified")
+		return nil, controller.ProvisioningFinished, fmt.Errorf("configuration error, no node was specified")
 	}
 
 	name := options.PVName
@@ -104,17 +105,17 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	switch lvmType {
 	case stripedType, mirrorType, linearType:
 	default:
-		return nil, fmt.Errorf("configuration error, lvmtype %s is invalid", lvmType)
+		return nil, controller.ProvisioningFinished, fmt.Errorf("configuration error, lvmtype %s is invalid", lvmType)
 	}
 
 	klog.Infof("Creating volume %v at %v:%v", name, node.Name, path)
 	requests, ok := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
 	if !ok {
-		return nil, fmt.Errorf("configuration error, no volume size was specified")
+		return nil, controller.ProvisioningFinished, fmt.Errorf("configuration error, no volume size was specified")
 	}
 	size, ok := requests.AsInt64()
 	if !ok {
-		return nil, fmt.Errorf("configuration error, no volume size not readable")
+		return nil, controller.ProvisioningFinished, fmt.Errorf("configuration error, no volume size not readable")
 	}
 
 	volumeMode := v1.PersistentVolumeFilesystem
@@ -135,7 +136,7 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	}
 	if err := p.createProvisionerPod(va); err != nil {
 		klog.Errorf("error creating provisioner pod :%v", err)
-		return nil, err
+		return nil, controller.ProvisioningReschedule, err
 	}
 
 	pv := &v1.PersistentVolume{
@@ -177,12 +178,12 @@ func (p *lvmProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		},
 	}
 
-	return pv, nil
+	return pv, controller.ProvisioningFinished, nil
 }
 
 // Delete removes the storage asset that was created by Provision represented
 // by the given PV.
-func (p *lvmProvisioner) Delete(volume *v1.PersistentVolume) (err error) {
+func (p *lvmProvisioner) Delete(ctx context.Context, volume *v1.PersistentVolume) (err error) {
 	path, node, err := p.getPathAndNodeForPV(volume)
 	if err != nil {
 		return err
@@ -368,22 +369,22 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 
 	// If it already exists due to some previous errors, the pod will be cleaned up later automatically
 	// https://github.com/rancher/local-path-provisioner/issues/27
-	_, err = p.kubeClient.CoreV1().Pods(p.namespace).Create(provisionerPod)
+	_, err = p.kubeClient.CoreV1().Pods(p.namespace).Create(context.Background(), provisionerPod, metav1.CreateOptions{})
 	if err != nil && !k8serror.IsAlreadyExists(err) {
 		return err
 	}
 
 	defer func() {
-		e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(provisionerPod.Name, &metav1.DeleteOptions{})
+		e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(context.Background(), provisionerPod.Name, metav1.DeleteOptions{})
 		if e != nil {
 			klog.Errorf("unable to delete the provisioner pod: %v", e)
 		}
 	}()
 
 	completed := false
-	retrySeconds := 60
+	retrySeconds := 120
 	for i := 0; i < retrySeconds; i++ {
-		pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(provisionerPod.Name, metav1.GetOptions{})
+		pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(context.Background(), provisionerPod.Name, metav1.GetOptions{})
 		if err != nil {
 			klog.Errorf("error reading provisioner pod:%v", err)
 		} else if pod.Status.Phase == v1.PodSucceeded {
