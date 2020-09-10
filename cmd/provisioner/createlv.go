@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/lvmd/commands"
 	"github.com/urfave/cli/v2"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 const (
