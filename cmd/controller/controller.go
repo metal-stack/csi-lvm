@@ -188,6 +188,15 @@ func (p *lvmProvisioner) Delete(ctx context.Context, volume *v1.PersistentVolume
 	if err != nil {
 		return err
 	}
+
+	_, err = p.kubeClient.CoreV1().Nodes().Get(context.Background(), node, metav1.GetOptions{})
+	if err != nil {
+		if k8serror.IsNotFound(err) {
+			klog.Infof("node %s not found anymore. Assuming volume %s is gone for good.", node, volume.Name)
+			return nil
+		}
+	}
+
 	klog.Infof("delete volume: %s on node:%s reclaim:%s", path, node, volume.Spec.PersistentVolumeReclaimPolicy)
 	if volume.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimRetain {
 		isBlock := false
