@@ -3,6 +3,9 @@ FROM alpine
 ARG prtag
 ENV PRTAG=$prtag
 
+ARG dockertag
+ENV DOCKERTAG=$dockertag
+
 ARG prpullpolicy
 ENV PRPULLPOLICY=$prpullpolicy
 

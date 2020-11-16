@@ -38,7 +38,7 @@ tests:
 	@minikube docker-env > tests/files/.dockerenv
 	@sh -c '. ./tests/files/.dockerenv && docker build -t metalstack/csi-lvm-provisioner:${TEST_TAG} . -f cmd/provisioner/Dockerfile'
 	@sh -c '. ./tests/files/.dockerenv && docker build -t metalstack/csi-lvm-controller:${TEST_TAG} . -f cmd/controller/Dockerfile'
-	@sh -c '. ./tests/files/.dockerenv && docker build -t csi-lvm-tests:${TEST_TAG} --build-arg prtag=${TEST_TAG} --build-arg prpullpolicy="IfNotPresent" --build-arg prdevicepattern="loop[0-1]" tests' >/dev/null
+	@sh -c '. ./tests/files/.dockerenv && docker build -t csi-lvm-tests:${TEST_TAG} --build-arg dockertag=${DOCKER_TAG} --build-arg prtag=${TEST_TAG} --build-arg prpullpolicy="IfNotPresent" --build-arg prdevicepattern="loop[0-1]" tests' >/dev/null
 	@sh -c '. ./tests/files/.dockerenv && docker run --rm csi-lvm-tests:${TEST_TAG} bats /bats/start.bats /bats/revive.bats /bats/end.bats'
 	@rm tests/files/.dockerenv
 	@rm tests/files/.kubeconfig
@@ -46,5 +46,5 @@ tests:
 
 .PHONY: metalci
 metalci: dockerimages dockerpush
-	docker build -t csi-lvm-tests:${TEST_TAG} --build-arg prtag=${TEST_TAG} --build-arg prpullpolicy="Always" --build-arg prdevicepattern='nvme[0-9]n[0-9]' tests > /dev/null
+	docker build -t csi-lvm-tests:${TEST_TAG} --build-arg dockertag=${DOCKER_TAG} --build-arg prtag=${TEST_TAG} --build-arg prpullpolicy="Always" --build-arg prdevicepattern='nvme[0-9]n[0-9]' tests > /dev/null
 	docker run --rm csi-lvm-tests:${TEST_TAG} bats /bats/start.bats /bats/cycle.bats /bats/end.bats
