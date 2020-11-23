@@ -25,7 +25,7 @@ var (
 	envVgName                    = "CSI_LVM_VG_NAME"
 	flagProvisionerImage         = "provisioner-image"
 	envProvisionerImage          = "CSI_LVM_PROVISIONER_IMAGE"
-	defaultProvisionerImage      = "metalstack/csi-lvm-provisioner"
+	defaultProvisionerImage      = "ghcr.io/metal-stack/csi-lvm-provisioner"
 	flagDevicePattern            = "device-pattern"
 	envDevicePattern             = "CSI_LVM_DEVICE_PATTERN"
 	flagDefaultLVMType           = "default-lvm-type"

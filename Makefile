@@ -1,5 +1,5 @@
 GO111MODULE := on
-DOCKER_TAG := $(or ${GITHUB_TAG_NAME}, latest)
+DOCKER_TAG := $(or ${GIT_TAG_NAME}, latest)
 
 all: provisioner controller
 
@@ -15,13 +15,13 @@ controller:
 
 .PHONY: dockerimages
 dockerimages:
-	docker build -t metalstack/csi-lvm-provisioner:${DOCKER_TAG} . -f cmd/provisioner/Dockerfile
-	docker build -t metalstack/csi-lvm-controller:${DOCKER_TAG} . -f cmd/controller/Dockerfile
+	docker build -t ghcr.io/metal-stack/csi-lvm-provisioner:${DOCKER_TAG} . -f cmd/provisioner/Dockerfile
+	docker build -t ghcr.io/metal-stack/csi-lvm-controller:${DOCKER_TAG} . -f cmd/controller/Dockerfile
 
 .PHONY: dockerpush
 dockerpush:
-	docker push metalstack/csi-lvm-controller:${DOCKER_TAG}
-	docker push metalstack/csi-lvm-provisioner:${DOCKER_TAG}
+	docker push ghcr.io/metal-stack/csi-lvm-controller:${DOCKER_TAG}
+	docker push ghcr.io/metal-stack/csi-lvm-provisioner:${DOCKER_TAG}
 
 .PHONY: clean
 clean:
@@ -43,6 +43,6 @@ tests:
 	@minikube delete
 
 .PHONY: metalci
-metalci: dockerimages dockerpush
+metalci:
 	docker build -t csi-lvm-tests:${DOCKER_TAG} --build-arg prtag=${DOCKER_TAG} --build-arg prpullpolicy="Always" --build-arg prdevicepattern='nvme[0-9]n[0-9]' tests > /dev/null
 	docker run --rm csi-lvm-tests:${DOCKER_TAG} bats /bats/start.bats /bats/cycle.bats /bats/end.bats

@@ -165,7 +165,7 @@ spec:
       serviceAccountName: csi-lvm-controller
       containers:
       - name: csi-lvm-controller
-        image: metalstack/csi-lvm-controller:v0.6.2
+        image: ghcr.io/metal-stack/csi-lvm-controller:v0.6.3
         imagePullPolicy: IfNotPresent
         command:
         - /csi-lvm-controller
@@ -177,7 +177,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: CSI_LVM_PROVISIONER_IMAGE
-          value: "metalstack/csi-lvm-provisioner:v0.6.2"
+          value: "ghcr.io/metal-stack/csi-lvm-provisioner:v0.6.3"
         - name: CSI_LVM_DEVICE_PATTERN
           value: "/dev/loop[0,1]"
 ---
@@ -198,7 +198,7 @@ spec:
       serviceAccountName: csi-lvm-reviver
       containers:
       - name: csi-lvm-reviver
-        image: metalstack/csi-lvm-provisioner:v0.6.2
+        image: ghcr.io/metal-stack/csi-lvm-provisioner:v0.6.3
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
