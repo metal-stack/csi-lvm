@@ -80,7 +80,7 @@ spec:
         - name: CSI_LVM_PULL_POLICY
           value: "IfNotPresent"
         - name: CSI_LVM_PROVISIONER_IMAGE
-          value: "metalstack/csi-lvm-provisioner:v0.6.2"
+          value: "ghcr.io/metal-stack/csi-lvm-provisioner:v0.6.2"
         - name: CSI_LVM_DEVICE_PATTERN
           # IMPORTANT: you cannot specify a wildcard (*) at any position in the devices grok.
           # value: "/dev/nvme[0-9]n[0-9]"

@@ -9,7 +9,7 @@ spec:
   - command:
     - sleep 
     - "1000"
-    image: metalstack/csi-lvm-provisioner
+    image: ghcr.io/metal-stack/csi-lvm-provisioner
     imagePullPolicy: IfNotPresent
     name: csi-lvm-create
     resources:
