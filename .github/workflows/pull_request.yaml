@@ -1,0 +1,48 @@
+name: Build from pull request
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Figure out if running fork PR
+        id: fork
+        run: '["${{ secrets.DOCKER_REGISTRY_TOKEN }}" == ""] && echo "::set-output name=is_fork_pr::true" || echo "::set-output name=is_fork_pr::false"'
+
+      - name: Docker Login
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_REGISTRY_USER }}
+          password: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+        if: steps.fork.outputs.is_fork_pr == 'false'
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.32.2
+          args: --timeout=3m
+
+      - name: Build
+        run: |
+          export GIT_TAG_NAME=${GITHUB_HEAD_REF##*/}
+          make dockerimage
+
+      - name: Push
+        run: |
+          export GIT_TAG_NAME=${GITHUB_HEAD_REF##*/}
+          make dockerpush
+        if: steps.fork.outputs.is_fork_pr == 'false'
+
+      - name: Test with pushed images
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" > tests/files/.kubeconfig
+          make metalci
+        if: steps.fork.outputs.is_fork_pr == 'false'

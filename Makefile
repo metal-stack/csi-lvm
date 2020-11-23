@@ -15,13 +15,13 @@ controller:
 
 .PHONY: dockerimages
 dockerimages:
-	docker build -t metalstack/csi-lvm-provisioner:${DOCKER_TAG} . -f cmd/provisioner/Dockerfile
-	docker build -t metalstack/csi-lvm-controller:${DOCKER_TAG} . -f cmd/controller/Dockerfile
+	docker build -t ghcr.io/metal-stack/csi-lvm-provisioner:${DOCKER_TAG} . -f cmd/provisioner/Dockerfile
+	docker build -t ghcr.io/metal-stack/csi-lvm-controller:${DOCKER_TAG} . -f cmd/controller/Dockerfile
 
 .PHONY: dockerpush
 dockerpush:
-	docker push metalstack/csi-lvm-controller:${DOCKER_TAG}
-	docker push metalstack/csi-lvm-provisioner:${DOCKER_TAG}
+	docker push ghcr.io/metal-stack/csi-lvm-controller:${DOCKER_TAG}
+	docker push ghcr.io/metal-stack/csi-lvm-provisioner:${DOCKER_TAG}
 
 .PHONY: clean
 clean:
