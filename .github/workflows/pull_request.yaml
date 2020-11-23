@@ -33,7 +33,7 @@ jobs:
       - name: Build
         run: |
           export GIT_TAG_NAME=${GITHUB_HEAD_REF##*/}
-          make dockerimage
+          make dockerimages
 
       - name: Push
         run: |
