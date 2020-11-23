@@ -1,5 +1,5 @@
 GO111MODULE := on
-DOCKER_TAG := $(or ${GITHUB_TAG_NAME}, latest)
+DOCKER_TAG := $(or ${GIT_TAG_NAME}, latest)
 
 all: provisioner controller
 

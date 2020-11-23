@@ -43,6 +43,7 @@ jobs:
 
       - name: Test with pushed images
         run: |
+          export GIT_TAG_NAME=${GITHUB_HEAD_REF##*/}
           echo "${{ secrets.KUBECONFIG }}" > tests/files/.kubeconfig
           make metalci
         if: steps.fork.outputs.is_fork_pr == 'false'
