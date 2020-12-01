@@ -4,6 +4,8 @@
 
 ## Overview
 
+This driver is replaced by [csi-driver-lvm](https://github.com/metal-stack/csi-driver-lvm), all further development happens there
+
 CSI LVM Provisioner utilizes local storage of Kubernetes nodes to provide persistent storage for pods.
 
 It automatically creates `hostPath` based persistent volumes on the nodes and makes use of the [Local Persistent Volume feature](https://kubernetes.io/blog/2018/04/13/local-persistent-volumes-beta/) introduced by Kubernetes 1.10 but it's simpler to use than the built-in `local` volume feature in Kubernetes.
