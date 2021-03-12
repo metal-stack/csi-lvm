@@ -62,12 +62,12 @@ func deleteLV(c *cli.Context) error {
 
 	output, err := umountLV(lvName, vgName, dirName)
 	if err != nil {
-		return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
+		return fmt.Errorf("unable to delete lv: %w output:%s", err, output)
 	}
 
 	output, err = commands.RemoveLV(context.Background(), vgName, lvName)
 	if err != nil {
-		return fmt.Errorf("unable to delete lv: %v output:%s", err, output)
+		return fmt.Errorf("unable to delete lv: %w output:%s", err, output)
 	}
 	klog.Infof("lv %s vg:%s deleted", lvName, vgName)
 	return nil
@@ -80,11 +80,11 @@ func umountLV(lvname, vgname, directory string) (string, error) {
 	cmd := exec.Command("umount", "--lazy", "--force", mountPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Errorf("unable to umount %s from %s output:%s err:%v", mountPath, lvPath, string(out), err)
+		klog.Errorf("unable to umount %s from %s output:%s err:%w", mountPath, lvPath, string(out), err)
 	}
 	err = os.Remove(mountPath)
 	if err != nil {
-		klog.Errorf("unable to remove mount directory:%s err:%v", mountPath, err)
+		klog.Errorf("unable to remove mount directory:%s err:%w", mountPath, err)
 	}
 	return "", nil
 }

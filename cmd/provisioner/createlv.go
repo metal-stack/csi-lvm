@@ -95,24 +95,24 @@ func createLV(c *cli.Context) error {
 
 	output, err := createVG(vgName, devicesPattern)
 	if err != nil {
-		return fmt.Errorf("unable to create vg: %v output:%s", err, output)
+		return fmt.Errorf("unable to create vg: %w output:%s", err, output)
 	}
 
 	output, err = createLVS(context.Background(), vgName, lvName, lvSize, lvmType, blockMode)
 	if err != nil {
-		return fmt.Errorf("unable to create lv: %v output:%s", err, output)
+		return fmt.Errorf("unable to create lv: %w output:%s", err, output)
 	}
 
 	if !blockMode {
 		output, err = mountLV(lvName, vgName, dirName)
 		if err != nil {
-			return fmt.Errorf("unable to mount lv: %v output:%s", err, output)
+			return fmt.Errorf("unable to mount lv: %w output:%s", err, output)
 		}
 		klog.Infof("mounted lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	} else {
 		output, err = bindMountLV(lvName, vgName, dirName)
 		if err != nil {
-			return fmt.Errorf("unable to bind mount lv: %v output:%s", err, output)
+			return fmt.Errorf("unable to bind mount lv: %w output:%s", err, output)
 		}
 		klog.Infof("block lv %s size:%d vg:%s devices:%s created", lvName, lvSize, vgName, devicesPattern)
 	}
@@ -143,7 +143,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 	cmd := exec.Command("blkid", lvPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Infof("unable to check if %s is already formatted:%v", lvPath, err)
+		klog.Infof("unable to check if %s is already formatted:%w", lvPath, err)
 	}
 	if strings.Contains(string(out), "ext4") {
 		formatted = true
@@ -155,13 +155,13 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 		cmd = exec.Command("mkfs.ext4", lvPath)
 		out, err = cmd.CombinedOutput()
 		if err != nil {
-			return string(out), fmt.Errorf("unable to format lv:%s err:%v", lvname, err)
+			return string(out), fmt.Errorf("unable to format lv:%s err:%w", lvname, err)
 		}
 	}
 
 	err = os.MkdirAll(mountPath, 0777)
 	if err != nil {
-		return string(out), fmt.Errorf("unable to create mount directory for lv:%s err:%v", lvname, err)
+		return string(out), fmt.Errorf("unable to create mount directory for lv:%s err:%w", lvname, err)
 	}
 
 	// --make-shared is required that this mount is visible outside this container.
@@ -172,12 +172,12 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 	if err != nil {
 		mountOutput := string(out)
 		if !strings.Contains(mountOutput, "already mounted") {
-			return string(out), fmt.Errorf("unable to mount %s to %s err:%v output:%s", lvPath, mountPath, err, out)
+			return string(out), fmt.Errorf("unable to mount %s to %s err:%w output:%s", lvPath, mountPath, err, out)
 		}
 	}
 	err = os.Chmod(mountPath, 0777)
 	if err != nil {
-		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%v", mountPath, err)
+		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%w", mountPath, err)
 	}
 	klog.Infof("mountlv output:%s", out)
 	return "", nil
@@ -188,7 +188,7 @@ func bindMountLV(lvname, vgname, directory string) (string, error) {
 	mountPath := path.Join(directory, lvname)
 	_, err := os.Create(mountPath)
 	if err != nil {
-		return "", fmt.Errorf("unable to create mount directory for lv:%s err:%v", lvname, err)
+		return "", fmt.Errorf("unable to create mount directory for lv:%s err:%w", lvname, err)
 	}
 
 	// --make-shared is required that this mount is visible outside this container.
@@ -200,12 +200,12 @@ func bindMountLV(lvname, vgname, directory string) (string, error) {
 	if err != nil {
 		mountOutput := string(out)
 		if !strings.Contains(mountOutput, "already mounted") {
-			return string(out), fmt.Errorf("unable to mount %s to %s err:%v output:%s", lvPath, mountPath, err, out)
+			return string(out), fmt.Errorf("unable to mount %s to %s err:%w output:%s", lvPath, mountPath, err, out)
 		}
 	}
 	err = os.Chmod(mountPath, 0777)
 	if err != nil {
-		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%v", mountPath, err)
+		return "", fmt.Errorf("unable to change permissions of volume mount %s err:%w", mountPath, err)
 	}
 	klog.Infof("bindmountlv output:%s", out)
 	return "", nil
@@ -214,7 +214,7 @@ func bindMountLV(lvname, vgname, directory string) (string, error) {
 func vgExists(name string) bool {
 	vgs, err := commands.ListVG(context.Background())
 	if err != nil {
-		klog.Infof("unable to list existing volumegroups:%v", err)
+		klog.Infof("unable to list existing volumegroups:%w", err)
 	}
 	vgexists := false
 	for _, vg := range vgs {
@@ -232,12 +232,12 @@ func vgactivate(name string) {
 	cmd := exec.Command("vgscan")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Infof("unable to scan for volumegroups:%s %v", out, err)
+		klog.Infof("unable to scan for volumegroups:%s %w", out, err)
 	}
 	cmd = exec.Command("vgchange", "-ay")
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		klog.Infof("unable to activate volumegroups:%s %v", out, err)
+		klog.Infof("unable to activate volumegroups:%s %w", out, err)
 	}
 }
 
@@ -257,7 +257,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 
 	physicalVolumes, err := devices(devicesPattern)
 	if err != nil {
-		return "", fmt.Errorf("unable to lookup devices from devicesPattern %s, err:%v", devicesPattern, err)
+		return "", fmt.Errorf("unable to lookup devices from devicesPattern %s, err:%w", devicesPattern, err)
 	}
 	tags := []string{"vg.metal-stack.io/csi-lvm"}
 
@@ -276,7 +276,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string, blockMode bool) (string, error) {
 	lvs, err := commands.ListLV(context.Background(), vg+"/"+name)
 	if err != nil {
-		klog.Infof("unable to list existing logicalvolumes:%v", err)
+		klog.Infof("unable to list existing logicalvolumes:%w", err)
 	}
 	lvExists := false
 	for _, lv := range lvs {
@@ -300,7 +300,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 
 	pvs, err := pvCount(vg)
 	if err != nil {
-		return "", fmt.Errorf("unable to determine pv count of vg: %v", err)
+		return "", fmt.Errorf("unable to determine pv count of vg: %w", err)
 	}
 
 	if pvs < 2 {
