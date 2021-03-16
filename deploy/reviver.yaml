@@ -19,7 +19,6 @@ spec:
   privileged: true
   fsGroup:
     rule: RunAsAny
-  privileged: true
   runAsUser:
     rule: RunAsAny
   seLinux:
