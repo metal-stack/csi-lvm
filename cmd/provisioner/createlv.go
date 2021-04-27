@@ -264,7 +264,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 	args := []string{"-v", name}
 	args = append(args, physicalVolumes...)
 	for _, tag := range tags {
-		args = append(args, "--add-tag", tag)
+		args = append(args, "--addtag", tag)
 	}
 	klog.Infof("create vg with command: vgcreate %v", args)
 	cmd := exec.Command("vgcreate", args...)
@@ -320,7 +320,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 
 	tags := []string{"lv.metal-stack.io/csi-lvm", "isBlock=" + strconv.FormatBool(blockMode)}
 	for _, tag := range tags {
-		args = append(args, "--add-tag", tag)
+		args = append(args, "--addtag", tag)
 	}
 	args = append(args, vg)
 	klog.Infof("lvreate %s", args)
