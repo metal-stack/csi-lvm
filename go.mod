@@ -31,3 +31,5 @@ require (
 	k8s.io/utils v0.0.0-20210305010621-2afb4311ab10 // indirect
 	sigs.k8s.io/sig-storage-lib-external-provisioner/v6 v6.3.0
 )
+
+replace github.com/google/lvmd => github.com/metal-stack/lvmd v0.0.0-20210510105719-1fac529a6634

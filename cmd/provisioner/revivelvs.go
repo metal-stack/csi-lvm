@@ -100,6 +100,10 @@ func reviveLVs(c *cli.Context) error {
 		tp, err := os.Lstat(targetPath)
 		if err != nil {
 			klog.Infof("target %s is missing. Reviving ...\n", targetPath)
+			if lv.ActualDevMajNumber < 0 || lv.ActualDevMinNumber < 0 {
+				klog.Infof("logical volume %s seems broken. Skipping", lv.Name)
+				continue
+			}
 			for _, n := range lv.Tags {
 				if n == "isBlock=true" {
 					_, err := bindMountLV(lv.Name, vgName, dirName)
