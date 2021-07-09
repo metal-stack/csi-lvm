@@ -26,6 +26,8 @@ controller:
   ## value: "/dev/sd[abcd]"
   lvmDevicePattern: "/dev/loop[0-1]"
 
+  lvmVolumeGroupName: csi-lvm
+
   podAnnotations: {}
 
   podSecurityContext: {}

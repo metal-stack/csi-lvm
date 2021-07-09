@@ -46,6 +46,8 @@ spec:
               value: "{{ .Values.reviver.image.repository }}:{{ .Values.reviver.image.tag | default .Chart.AppVersion }}"
             - name: CSI_LVM_DEVICE_PATTERN
               value: "{{ .Values.controller.lvmDevicePattern }}"
+            - name: CSI_LVM_VG_NAME
+              values: "{{ .Values.controller.lvmVolumeGroupName }}"
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
@@ -56,7 +58,7 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.tolerations }} 
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
