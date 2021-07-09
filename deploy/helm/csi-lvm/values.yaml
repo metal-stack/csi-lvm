@@ -16,6 +16,7 @@ controller:
     tag: ""
 
   storageClass:
+    name: ""
     annotations: {}
     reclaimPolicy: Delete
 
