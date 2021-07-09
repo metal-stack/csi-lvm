@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "csi-lvm.fullname" . }}
+  labels:
+    {{- include "csi-lvm.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "csi-lvm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.reviver.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "csi-lvm.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "csi-lvm.fullname" . }}-reviver
+      securityContext:
+        {{- toYaml .Values.reviver.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}-reviver
+        securityContext:
+          {{- toYaml .Values.reviver.securityContext | nindent 12 }}
+        image: "{{ .Values.reviver.image.repository }}:{{ .Values.reviver.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.reviver.image.pullPolicy }}
+        command:
+          - /csi-lvm-provisioner
+        args:
+          - revivelvs
+        env:
+          - name: CSI_LVM_MOUNTPOINT
+            value: {{ .Values.reviver.hostPathData }}
+        volumeMounts:
+          - mountPath: {{ .Values.reviver.hostPathData }}
+            name: data
+            mountPropagation: Bidirectional
+          - mountPath: /dev
+            name: devices
+          - mountPath: /lib/modules
+            name: modules
+          - mountPath: /etc/lvm/backup
+            name: lvmbackup
+            mountPropagation: Bidirectional
+          - mountPath: /etc/lvm/cache
+            name: lvmcache
+            mountPropagation: Bidirectional
+          - mountPath: /run/lock/lvm
+            name: lvmlock
+            mountPropagation: Bidirectional
+      volumes:
+        - hostPath:
+            path: {{ .Values.reviver.hostPathData }}
+            type: DirectoryOrCreate
+          name: data
+        - hostPath:
+            path: /dev
+            type: DirectoryOrCreate
+          name: devices
+        - hostPath:
+            path: /lib/modules
+            type: DirectoryOrCreate
+          name: modules
+        - hostPath:
+            path: /etc/lvm/backup
+            type: DirectoryOrCreate
+          name: lvmbackup
+        - hostPath:
+            path: /etc/lvm/cache
+            type: DirectoryOrCreate
+          name: lvmcache
+        - hostPath:
+            path: /run/lock/lvm
+            type: DirectoryOrCreate
+          name: lvmlock

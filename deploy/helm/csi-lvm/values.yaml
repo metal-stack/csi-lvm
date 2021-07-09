@@ -1,0 +1,98 @@
+## Default values for csi-lvm.
+## This is a YAML-formatted file.
+## Declare variables to be passed into your templates.
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+controller:
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/metal-stack/csi-lvm-controller
+    pullPolicy: IfNotPresent
+    ## Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+
+  storageClass:
+    annotations: {}
+    reclaimPolicy: Delete
+
+  ## The default grok pattern for disks
+  ## IMPORTANT: you cannot specify a wildcard (*) at any position in the devices grok.
+  ## value: "/dev/nvme[0-9]n[0-9]"
+  ## value: "/dev/sd[abcd]"
+  lvmDevicePattern: "/dev/loop[0-1]"
+
+  podAnnotations: {}
+
+  podSecurityContext: {}
+    ## fsGroup: 2000
+
+  securityContext: {}
+    ## capabilities:
+    ##   drop:
+    ##   - ALL
+    ## readOnlyRootFilesystem: true
+    ## runAsNonRoot: true
+    ## runAsUser: 1000
+
+  resources: {}
+    ## We usually recommend not to specify default resources and to leave this as a conscious
+    ## choice for the user. This also increases chances charts run on environments with little
+    ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+    ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    ## limits:
+    ##   cpu: 100m
+    ##   memory: 128Mi
+    ## requests:
+    ##   cpu: 100m
+    ##   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+reviver:
+  image:
+    repository: ghcr.io/metal-stack/csi-lvm-provisioner
+    pullPolicy: IfNotPresent
+    ## Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+
+  hostPathData: /tmp/csi-lvm
+
+  podAnnotations: {}
+
+  podSecurityContext: {}
+    ## fsGroup: 2000
+
+  securityContext:
+    privileged: true
+    ## capabilities:
+    ##   drop:
+    ##   - ALL
+    ## readOnlyRootFilesystem: true
+    ## runAsNonRoot: true
+    ## runAsUser: 1000
+
+  resources: {}
+    ## We usually recommend not to specify default resources and to leave this as a conscious
+    ## choice for the user. This also increases chances charts run on environments with little
+    ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+    ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    ## limits:
+    ##   cpu: 100m
+    ##   memory: 128Mi
+    ## requests:
+    ##   cpu: 100m
+    ##   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}

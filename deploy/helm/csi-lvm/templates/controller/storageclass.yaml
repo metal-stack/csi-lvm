@@ -1,0 +1,13 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ include "csi-lvm.fullname" . }}
+  labels:
+    {{- include "csi-lvm.labels" . | nindent 4 }}
+  {{- with .Values.controller.storageClass.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+provisioner: metal-stack.io/csi-lvm
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: {{ .Values.controller.storageClass.reclaimPolicy }}

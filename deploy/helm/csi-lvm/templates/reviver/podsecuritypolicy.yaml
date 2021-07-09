@@ -1,0 +1,33 @@
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: {{ include "csi-lvm.fullname" . }}
+  labels:
+    {{- include "csi-lvm.labels" . | nindent 4 }}
+spec:
+  hostNetwork: false
+  hostPID: false
+  hostIPC: false
+  allowPrivilegeEscalation: true
+  privileged: true
+  fsGroup:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+    - '*'
+  allowedHostPaths:
+    - pathPrefix: {{ .Values.reviver.hostPathData }}
+      readOnly: false
+    - pathPrefix: /dev
+      readOnly: false
+    - pathPrefix: /lib/modules
+      readOnly: false
+    - pathPrefix: /etc/lvm
+      readOnly: false
+    - pathPrefix: /run/lock/lvm
+      readOnly: false
