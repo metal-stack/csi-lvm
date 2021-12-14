@@ -11,7 +11,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
+	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
 )
 
 var (
@@ -37,11 +37,11 @@ var (
 )
 
 func cmdNotFound(c *cli.Context, command string) {
-	panic(fmt.Errorf("Unrecognized command: %s", command))
+	panic(fmt.Errorf("unrecognized command: %s", command))
 }
 
 func onUsageError(c *cli.Context, err error, isSubcommand bool) error {
-	panic(fmt.Errorf("Usage error, please check your command"))
+	panic(fmt.Errorf("usage error, please check your command"))
 }
 
 func startCmd() *cli.Command {
@@ -118,11 +118,6 @@ func startDaemon(c *cli.Context) error {
 		return errors.Wrap(err, "unable to get k8s client")
 	}
 
-	serverVersion, err := kubeClient.Discovery().ServerVersion()
-	if err != nil {
-		return errors.Wrap(err, "Cannot start Provisioner: failed to get Kubernetes server version")
-	}
-
 	provisionerName := c.String(flagProvisionerName)
 	if provisionerName == "" {
 		return fmt.Errorf("invalid empty flag %v", flagProvisionerName)
@@ -163,7 +158,6 @@ func startDaemon(c *cli.Context) error {
 		kubeClient,
 		provisionerName,
 		provisioner,
-		serverVersion.GitVersion,
 	)
 	klog.Info("Provisioner started")
 	pc.Run(context.Background())
