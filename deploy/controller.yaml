@@ -27,7 +27,7 @@ rules:
   verbs: ["get", "list", "watch"]
 - apiGroups: [""]
   resources: ["endpoints", "persistentvolumes", "pods"]
-  verbs: ["*"]
+  verbs: ["create","delete","get","list","patch","update","watch"]
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create", "patch"]
