@@ -1,14 +1,13 @@
 module github.com/metal-stack/csi-lvm
 
-go 1.17
+go 1.18
 
 require (
 	github.com/google/lvmd v0.0.0-20200421122210-17bd8b9f710f
-	github.com/pkg/errors v0.9.1
-	github.com/urfave/cli/v2 v2.3.0
-	k8s.io/api v0.23.0
-	k8s.io/apimachinery v0.23.0
-	k8s.io/client-go v0.23.0
+	github.com/urfave/cli/v2 v2.6.0
+	k8s.io/api v0.23.6
+	k8s.io/apimachinery v0.23.6
+	k8s.io/client-go v0.23.6
 	k8s.io/klog/v2 v2.30.0
 	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.0
 )
@@ -53,7 +52,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
