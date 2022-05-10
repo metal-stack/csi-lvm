@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
 	clientset "k8s.io/client-go/kubernetes"
@@ -110,12 +109,12 @@ func startDaemon(c *cli.Context) error {
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return errors.Wrap(err, "unable to get client config")
+		return fmt.Errorf("unable to get client config %w", err)
 	}
 
 	kubeClient, err := clientset.NewForConfig(config)
 	if err != nil {
-		return errors.Wrap(err, "unable to get k8s client")
+		return fmt.Errorf("unable to get k8s client %w", err)
 	}
 
 	provisionerName := c.String(flagProvisionerName)
