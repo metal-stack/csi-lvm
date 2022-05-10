@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/google/lvmd/commands"
 	"github.com/urfave/cli/v2"
@@ -60,12 +62,25 @@ func deleteLV(c *cli.Context) error {
 
 	klog.Infof("delete lv %s vg:%s dir:%s block:%t", lvName, vgName, dirName, blockMode)
 
-	output, err := umountLV(lvName, vgName, dirName)
+	found := false
+	lvs, err := commands.ListLV(context.Background(), vgName)
 	if err != nil {
-		return fmt.Errorf("unable to delete lv: %w output:%s", err, output)
+		return fmt.Errorf("unable to list existing logicalvolumes:%v", err)
+	}
+	for _, lv := range lvs {
+		if strings.Contains(lv.Name, lvName) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		klog.Infof("lv %s not found anymore", lvName)
+		return nil
 	}
 
-	output, err = commands.RemoveLV(context.Background(), vgName, lvName)
+	umountLV(lvName, vgName, dirName)
+
+	output, err := commands.RemoveLV(context.Background(), vgName, lvName)
 	if err != nil {
 		return fmt.Errorf("unable to delete lv: %w output:%s", err, output)
 	}
@@ -73,10 +88,14 @@ func deleteLV(c *cli.Context) error {
 	return nil
 }
 
-func umountLV(lvname, vgname, directory string) (string, error) {
+func umountLV(lvname, vgname, directory string) {
 	lvPath := fmt.Sprintf("/dev/%s/%s", vgname, lvname)
 	mountPath := path.Join(directory, lvname)
 
+	if _, err := os.Stat(mountPath); errors.Is(err, os.ErrNotExist) {
+		klog.Infof("mount point %s not found anymore", mountPath)
+		return
+	}
 	cmd := exec.Command("umount", "--lazy", "--force", mountPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -86,5 +105,4 @@ func umountLV(lvname, vgname, directory string) (string, error) {
 	if err != nil {
 		klog.Errorf("unable to remove mount directory:%s err:%w", mountPath, err)
 	}
-	return "", nil
 }
