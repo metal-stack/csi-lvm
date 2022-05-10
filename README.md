@@ -308,3 +308,7 @@ To uninstall, execute:
 kubectl delete -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/deploy/controller.yaml
 kubectl delete -f https://raw.githubusercontent.com/metal-stack/csi-lvm/master/deploy/reviver.yaml
 ```
+
+## Migration
+
+If you want to migrate your existing PVC to / from csi-driver-lvm, you can use [korb](https://github.com/BeryJu/korb).
