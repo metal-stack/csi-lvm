@@ -34,8 +34,8 @@ tests:
 	@./deploy/start-minikube-on-linux.sh >/dev/null 2>/dev/null
 	@kubectl config view --flatten --minify > tests/files/.kubeconfig
 	@minikube docker-env > tests/files/.dockerenv
-	@sh -c '. ./tests/files/.dockerenv && docker build -t metalstack/csi-lvm-provisioner:${DOCKER_TAG} . -f cmd/provisioner/Dockerfile'
-	@sh -c '. ./tests/files/.dockerenv && docker build -t metalstack/csi-lvm-controller:${DOCKER_TAG} . -f cmd/controller/Dockerfile'
+	@sh -c '. ./tests/files/.dockerenv && docker build -t ghcr.io/metal-stack/csi-lvm-provisioner:${DOCKER_TAG} . -f cmd/provisioner/Dockerfile'
+	@sh -c '. ./tests/files/.dockerenv && docker build -t ghcr.io/metal-stack/csi-lvm-controller:${DOCKER_TAG} . -f cmd/controller/Dockerfile'
 	@sh -c '. ./tests/files/.dockerenv && docker build -t csi-lvm-tests:${DOCKER_TAG} --build-arg prtag=${DOCKER_TAG} --build-arg prpullpolicy="IfNotPresent" --build-arg prdevicepattern="loop[0-1]" tests' >/dev/null
 	@sh -c '. ./tests/files/.dockerenv && docker run --rm csi-lvm-tests:${DOCKER_TAG} bats /bats/start.bats /bats/revive.bats /bats/end.bats'
 	@rm tests/files/.dockerenv
