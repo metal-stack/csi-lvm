@@ -227,7 +227,7 @@ func vgExists(name string) bool {
 	return vgexists
 }
 
-func vgactivate(name string) {
+func vgactivate() {
 	// scan for vgs and activate if any
 	cmd := exec.Command("vgscan")
 	out, err := cmd.CombinedOutput()
@@ -247,7 +247,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 		klog.Infof("volumegroup: %s already exists\n", name)
 		return name, nil
 	}
-	vgactivate(name)
+	vgactivate()
 	// now check again for existing vg again
 	vgexists = vgExists(name)
 	if vgexists {
@@ -274,7 +274,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 
 // createLV creates a new volume
 func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string, blockMode bool) (string, error) {
-	lvs, err := commands.ListLV(context.Background(), vg+"/"+name)
+	lvs, err := commands.ListLV(ctx, vg+"/"+name)
 	if err != nil {
 		klog.Infof("unable to list existing logicalvolumes:%w", err)
 	}

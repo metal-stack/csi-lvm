@@ -77,7 +77,7 @@ func reviveLVs(c *cli.Context) error {
 	vgexists := vgExists(vgName)
 	if !vgexists {
 		klog.Infof("volumegroup: %s not found\n", vgName)
-		vgactivate(vgName)
+		vgactivate()
 		// now check again for existing vg again
 		vgexists = vgExists(vgName)
 		if !vgexists {
