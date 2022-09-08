@@ -24,7 +24,7 @@ metadata:
 rules:
 - apiGroups: [""]
   resources: ["nodes", "persistentvolumeclaims"]
-  verbs: ["get", "list", "watch"]
+  verbs: ["get", "list", "watch", "update","patch"]
 - apiGroups: [""]
   resources: ["endpoints", "persistentvolumes", "pods"]
   verbs: ["create","delete","get","list","patch","update","watch"]
