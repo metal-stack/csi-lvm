@@ -134,7 +134,7 @@ func (p *lvmProvisioner) Provision(ctx context.Context, options controller.Provi
 		lvmType:  lvmType,
 		isBlock:  isBlock,
 	}
-	if err := p.createProvisionerPod(va); err != nil {
+	if err := p.createProvisionerPod(ctx, va); err != nil {
 		klog.Errorf("error creating provisioner pod :%v", err)
 		return nil, controller.ProvisioningReschedule, err
 	}
@@ -189,7 +189,7 @@ func (p *lvmProvisioner) Delete(ctx context.Context, volume *v1.PersistentVolume
 		return err
 	}
 
-	_, err = p.kubeClient.CoreV1().Nodes().Get(context.Background(), node, metav1.GetOptions{})
+	_, err = p.kubeClient.CoreV1().Nodes().Get(ctx, node, metav1.GetOptions{})
 	if err != nil {
 		if k8serror.IsNotFound(err) {
 			klog.Infof("node %s not found anymore. Assuming volume %s is gone for good.", node, volume.Name)
@@ -213,7 +213,7 @@ func (p *lvmProvisioner) Delete(ctx context.Context, volume *v1.PersistentVolume
 			size:     0,
 			isBlock:  isBlock,
 		}
-		if err := p.createProvisionerPod(va); err != nil {
+		if err := p.createProvisionerPod(ctx, va); err != nil {
 			klog.Infof("clean up volume %v failed: %v", volume.Name, err)
 			return err
 		}
@@ -223,7 +223,7 @@ func (p *lvmProvisioner) Delete(ctx context.Context, volume *v1.PersistentVolume
 	return nil
 }
 
-func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
+func (p *lvmProvisioner) createProvisionerPod(ctx context.Context, va volumeAction) (err error) {
 	if va.name == "" || va.path == "" || va.nodeName == "" {
 		return fmt.Errorf("invalid empty name or path or node")
 	}
@@ -378,13 +378,13 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 
 	// If it already exists due to some previous errors, the pod will be cleaned up later automatically
 	// https://github.com/rancher/local-path-provisioner/issues/27
-	_, err = p.kubeClient.CoreV1().Pods(p.namespace).Create(context.Background(), provisionerPod, metav1.CreateOptions{})
+	_, err = p.kubeClient.CoreV1().Pods(p.namespace).Create(ctx, provisionerPod, metav1.CreateOptions{})
 	if err != nil && !k8serror.IsAlreadyExists(err) {
 		return err
 	}
 
 	defer func() {
-		e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(context.Background(), provisionerPod.Name, metav1.DeleteOptions{})
+		e := p.kubeClient.CoreV1().Pods(p.namespace).Delete(ctx, provisionerPod.Name, metav1.DeleteOptions{})
 		if e != nil {
 			klog.Errorf("unable to delete the provisioner pod: %v", e)
 		}
@@ -393,7 +393,7 @@ func (p *lvmProvisioner) createProvisionerPod(va volumeAction) (err error) {
 	completed := false
 	retrySeconds := 120
 	for i := 0; i < retrySeconds; i++ {
-		pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(context.Background(), provisionerPod.Name, metav1.GetOptions{})
+		pod, err := p.kubeClient.CoreV1().Pods(p.namespace).Get(ctx, provisionerPod.Name, metav1.GetOptions{})
 		if err != nil {
 			klog.Errorf("error reading provisioner pod:%v", err)
 		} else if pod.Status.Phase == v1.PodSucceeded {
