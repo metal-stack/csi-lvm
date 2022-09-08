@@ -35,6 +35,7 @@
 } 
 
 @test "deploy block pod" {
+    run sleep 30
     run kubectl apply -f /files/block.yaml
     [ "$status" -eq 0 ]
     [ "${lines[0]}" = "pod/volume-test-block created" ]
