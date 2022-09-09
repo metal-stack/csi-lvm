@@ -98,7 +98,7 @@ spec:
       serviceAccountName: csi-lvm-reviver-PRTAG
       containers:
       - name: csi-lvm-reviver
-        image: ghcr.io/metal-stack/csi-lvm-provisioner:PRTAG
+        image: ghcr.io/metal-stack/csi-lvm-provisioner:DOCKERTAG
         imagePullPolicy: PRPULLPOLICY
         securityContext:
           privileged: true

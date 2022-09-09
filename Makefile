@@ -1,5 +1,6 @@
 GO111MODULE := on
-DOCKER_TAG := $(or $(subst .,-,$(subst _,-,$(GIT_TAG_NAME))), latest)
+DOCKER_TAG := $(or $(subst _,-,$(GIT_TAG_NAME)), latest)
+PR_TAG := $(or $(subst .,-,$(subst _,-,$(GIT_TAG_NAME))), latest)
 
 all: provisioner controller
 
@@ -36,13 +37,13 @@ tests:
 	@minikube docker-env > tests/files/.dockerenv
 	@sh -c '. ./tests/files/.dockerenv && docker build -t ghcr.io/metal-stack/csi-lvm-provisioner:${DOCKER_TAG} . -f cmd/provisioner/Dockerfile'
 	@sh -c '. ./tests/files/.dockerenv && docker build -t ghcr.io/metal-stack/csi-lvm-controller:${DOCKER_TAG} . -f cmd/controller/Dockerfile'
-	@sh -c '. ./tests/files/.dockerenv && docker build -t csi-lvm-tests:${DOCKER_TAG} --build-arg prtag=${DOCKER_TAG} --build-arg prpullpolicy="IfNotPresent" --build-arg prdevicepattern="loop[0-1]" tests' >/dev/null
-	@sh -c '. ./tests/files/.dockerenv && docker run --rm csi-lvm-tests:${DOCKER_TAG} bats /bats/start.bats /bats/revive.bats /bats/end.bats'
+	@sh -c '. ./tests/files/.dockerenv && docker build -t csi-lvm-tests:${PR_TAG} --build-arg prtag=${PR_TAG} --build-arg dockertag=${DOCKER_TAG} --build-arg prpullpolicy="IfNotPresent" --build-arg prdevicepattern="loop[0-1]" tests' >/dev/null
+	@sh -c '. ./tests/files/.dockerenv && docker run --rm csi-lvm-tests:${PR_TAG} bats /bats/start.bats /bats/revive.bats /bats/end.bats'
 	@rm tests/files/.dockerenv
 	@rm tests/files/.kubeconfig
 	@minikube delete
 
 .PHONY: metalci
 metalci:
-	docker build -t csi-lvm-tests:${DOCKER_TAG} --build-arg prtag=${DOCKER_TAG} --build-arg prpullpolicy="Always" --build-arg prdevicepattern='nvme[0-9]n[0-9]' tests > /dev/null
-	docker run --rm csi-lvm-tests:${DOCKER_TAG} bats /bats/start.bats /bats/cycle.bats /bats/end.bats
+	docker build -t csi-lvm-tests:${PR_TAG} --build-arg prtag=${PR_TAG} --build-arg dockertag=${DOCKER_TAG} --build-arg prpullpolicy="Always" --build-arg prdevicepattern='nvme[0-1]n[0-9]' tests > /dev/null
+	docker run --rm csi-lvm-tests:${PR_TAG} bats /bats/start.bats /bats/cycle.bats /bats/end.bats
