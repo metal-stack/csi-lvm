@@ -77,11 +77,11 @@ func umountLV(lvname, vgname, directory string) string {
 	cmd := exec.Command("umount", "--lazy", "--force", mountPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Errorf("unable to umount %s from %s output:%s err:%w", mountPath, lvPath, string(out), err)
+		klog.Errorf("unable to umount %s from %s output:%s err:%v", mountPath, lvPath, string(out), err)
 	}
 	err = os.Remove(mountPath)
 	if err != nil {
-		klog.Errorf("unable to remove mount directory:%s err:%w", mountPath, err)
+		klog.Errorf("unable to remove mount directory:%s err:%v", mountPath, err)
 	}
 	return ""
 }
