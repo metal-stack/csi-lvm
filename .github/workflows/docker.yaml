@@ -1,0 +1,95 @@
+---
+name: Docker Build Action
+on:
+  pull_request:
+    branches:
+      - master
+  release:
+    types:
+      - published
+  push:
+    branches:
+      - master
+
+env:
+  REGISTRY: ghcr.io
+  PROVISIONER_IMAGE_NAME: ${{ github.repository }}-provisioner
+  CONTROLLER_IMAGE_NAME: ${{ github.repository }}-controller
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Lint
+      uses: golangci/golangci-lint-action@v4
+      with:
+        args: --build-tags integration -p bugs -p unused --timeout=10m
+
+
+  build-platforms:
+    name: Docker Build Platforms
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+    env:
+      DOCKER_REGISTRY_TOKEN: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+
+    steps:
+    - name: Log in to the container registry
+      if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.DOCKER_REGISTRY_USER }}
+        password: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+
+    - name: Checkout
+      if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Set up Docker Buildx
+      if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
+      uses: docker/setup-buildx-action@v3
+
+    - name: Make tag
+      if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
+      run: |
+        [ "${GITHUB_EVENT_NAME}" == 'pull_request' ] && echo "tag=${GITHUB_HEAD_REF##*/}" >> $GITHUB_ENV || true
+        [ "${GITHUB_EVENT_NAME}" == 'release' ] && echo "tag=${GITHUB_REF##*/}" >> $GITHUB_ENV || true
+        [ "${GITHUB_EVENT_NAME}" == 'push' ] && echo "tag=latest" >> $GITHUB_ENV || true
+
+    - name: Build and push controller image
+      if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.CONTROLLER_IMAGE_NAME }}:${{ env.tag }}
+        file: cmd/controller/Dockerfile
+        platforms: linux/amd64
+
+    - name: Build and push provisioner image
+      if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.PROVISIONER_IMAGE_NAME }}:${{ env.tag }}
+        file: cmd/provisioner/Dockerfile
+        platforms: linux/amd64

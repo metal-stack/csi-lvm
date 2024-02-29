@@ -143,7 +143,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 	cmd := exec.Command("blkid", lvPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Infof("unable to check if %s is already formatted:%w", lvPath, err)
+		klog.Infof("unable to check if %s is already formatted:%v", lvPath, err)
 	}
 	if strings.Contains(string(out), "ext4") {
 		formatted = true
@@ -214,7 +214,7 @@ func bindMountLV(lvname, vgname, directory string) (string, error) {
 func vgExists(name string) bool {
 	vgs, err := commands.ListVG(context.Background())
 	if err != nil {
-		klog.Infof("unable to list existing volumegroups:%w", err)
+		klog.Infof("unable to list existing volumegroups:%v", err)
 	}
 	vgexists := false
 	for _, vg := range vgs {
@@ -232,12 +232,12 @@ func vgactivate() {
 	cmd := exec.Command("vgscan")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Infof("unable to scan for volumegroups:%s %w", out, err)
+		klog.Infof("unable to scan for volumegroups:%s %v", out, err)
 	}
 	cmd = exec.Command("vgchange", "-ay")
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		klog.Infof("unable to activate volumegroups:%s %w", out, err)
+		klog.Infof("unable to activate volumegroups:%s %v", out, err)
 	}
 }
 
@@ -276,7 +276,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType string, blockMode bool) (string, error) {
 	lvs, err := commands.ListLV(ctx, vg+"/"+name)
 	if err != nil {
-		klog.Infof("unable to list existing logicalvolumes:%w", err)
+		klog.Infof("unable to list existing logicalvolumes:%v", err)
 	}
 	lvExists := false
 	for _, lv := range lvs {
