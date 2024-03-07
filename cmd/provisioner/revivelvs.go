@@ -85,7 +85,7 @@ func reviveLVs(c *cli.Context) error {
 			return nil
 		}
 	}
-	cmd := exec.Command("lvchange", "-ay", vgName)
+	cmd := exec.Command("lvchange", "--activate","y", vgName)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		klog.Infof("unable to activate logical volumes:%s %v", out, err)
