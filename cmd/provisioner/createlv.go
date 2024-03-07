@@ -165,7 +165,7 @@ func mountLV(lvname, vgname, directory string) (string, error) {
 	}
 
 	// --make-shared is required that this mount is visible outside this container.
-	mountArgs := []string{"--make-shared", "-t", "ext4", lvPath, mountPath}
+	mountArgs := []string{"--make-shared", "--type", "ext4", lvPath, mountPath}
 	klog.Infof("mountlv command: mount %s", mountArgs)
 	cmd = exec.Command("mount", mountArgs...)
 	out, err = cmd.CombinedOutput()
@@ -234,7 +234,7 @@ func vgactivate() {
 	if err != nil {
 		klog.Infof("unable to scan for volumegroups:%s %v", out, err)
 	}
-	cmd = exec.Command("vgchange", "-ay")
+	cmd = exec.Command("vgchange", "--activate","y")
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		klog.Infof("unable to activate volumegroups:%s %v", out, err)
@@ -261,7 +261,7 @@ func createVG(name string, devicesPattern []string) (string, error) {
 	}
 	tags := []string{"vg.metal-stack.io/csi-lvm"}
 
-	args := []string{"-v", name}
+	args := []string{"--verbose", name}
 	args = append(args, physicalVolumes...)
 	for _, tag := range tags {
 		args = append(args, "--addtag", tag)
@@ -296,7 +296,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 		return "", fmt.Errorf("size must be greater than 0")
 	}
 
-	args := []string{"-v", "-n", name, "-W", "y", "-L", fmt.Sprintf("%db", size)}
+	args := []string{"--verbose", "--name", name, "--wipesignatures", "y", "--yes", "--size", fmt.Sprintf("%db", size)}
 
 	pvs, err := pvCount(vg)
 	if err != nil {
@@ -330,7 +330,7 @@ func createLVS(ctx context.Context, vg string, name string, size uint64, lvmType
 }
 
 func pvCount(vgname string) (int, error) {
-	cmd := exec.Command("vgs", vgname, "--noheadings", "-o", "pv_count")
+	cmd := exec.Command("vgs", vgname, "--noheadings", "--options", "pv_count")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return 0, err
