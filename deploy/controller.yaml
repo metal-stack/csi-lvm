@@ -48,6 +48,34 @@ subjects:
   name: csi-lvm-controller
   namespace: csi-lvm
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: csi-lvm-controller
+  namespace: csi-lvm
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    resourceNames: ["metal-stack.io-csi-lvm"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: csi-lvm-controller
+  namespace: csi-lvm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: csi-lvm-controller
+subjects:
+  - kind: ServiceAccount
+    name: csi-lvm-controller
+    namespace: csi-lvm
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
