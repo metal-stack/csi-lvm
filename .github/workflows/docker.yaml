@@ -31,7 +31,7 @@ jobs:
         go-version-file: 'go.mod'
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v4
+      uses: golangci/golangci-lint-action@v6
       with:
         args: --build-tags integration -p bugs -p unused --timeout=10m
 
@@ -76,7 +76,7 @@ jobs:
 
     - name: Build and push controller image
       if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         push: true
@@ -86,7 +86,7 @@ jobs:
 
     - name: Build and push provisioner image
       if: ${{ env.DOCKER_REGISTRY_TOKEN != '' }}
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         push: true

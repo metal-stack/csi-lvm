@@ -10,7 +10,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
+	pvController "sigs.k8s.io/sig-storage-lib-external-provisioner/v10/controller"
 )
 
 var (
@@ -153,13 +153,17 @@ func startDaemon(c *cli.Context) error {
 
 	provisioner := NewLVMProvisioner(kubeClient, namespace, vgName, mountPoint, devicePattern, provisionerImage, defaultLVMType, pullPolicy)
 
+	ctx := context.Background()
+	logger := klog.FromContext(ctx)
+
 	pc := pvController.NewProvisionController(
+		logger,
 		kubeClient,
 		provisionerName,
 		provisioner,
 	)
 	klog.Info("Provisioner started")
-	pc.Run(context.Background())
+	pc.Run(ctx)
 	klog.Info("Provisioner stopped")
 	return nil
 }
